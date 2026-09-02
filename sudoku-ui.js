@@ -428,6 +428,7 @@ function fillSelectedCellWithDigit(digit) {
   solvingCells[selectedCell].value = String(digit);
   clearSelection();
   updateCandidateLabels();
+  maybeAutoSolve();
 }
 
 // Clears the selection highlight/candidates when a click lands anywhere
@@ -470,6 +471,7 @@ function onSolvingCellInput(row, col, input) {
     clearSelection();
   }
   updateCandidateLabels();
+  if (v) maybeAutoSolve();
 }
 
 function updateCandidateLabels() {
@@ -513,6 +515,82 @@ function applyGridToEntries(grid) {
   }
 }
 
+function isGridComplete(grid) {
+  return grid.every((row) => row.every((v) => v !== 0));
+}
+
+// A completed grid is a genuine solution only if every row, column, and box
+// is missing nothing -- i.e. contains each digit 1-9 exactly once. This
+// check matters because SudokuLogic.solve() only ever fills EMPTY cells: a
+// grid with none left to fill is reported "solved" without solve() ever
+// looking at whether the cells that are already there conflict with each
+// other.
+function isGridFullyValid(grid) {
+  const { rowMissing, colMissing, boxMissing } = SudokuLogic.buildTrackingSets(grid);
+  return (
+    rowMissing.every((s) => s.size === 0) &&
+    colMissing.every((s) => s.size === 0) &&
+    boxMissing.every((s) => s.size === 0)
+  );
+}
+
+// Fills in the solved grid, locks every guessed (non-given) cell, and
+// recolors its text brown -- leaving the cell's white background alone.
+function markSolved(grid) {
+  applyGridToEntries(grid);
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const key = `${r},${c}`;
+      if (!givenCells.has(key)) {
+        solvingCells[key].disabled = true;
+        solvingCells[key].style.color = "var(--solved-guess)";
+      }
+    }
+  }
+}
+
+// Undoes markSolved()'s disabling/recoloring -- re-enables every guessed
+// cell and drops back to the stylesheet's default guess color. Called
+// before Reset writes new values into the grid, so a puzzle that was
+// solved (manually or automatically) and then reset is actually editable
+// again, instead of staying locked and brown.
+function clearSolvedStyling() {
+  for (const key in solvingCells) {
+    if (!givenCells.has(key)) {
+      solvingCells[key].disabled = false;
+      solvingCells[key].style.color = "";
+    }
+  }
+}
+
+// Shared by the Solve button and the auto-solve check below: validates the
+// current grid and, on success, fills in any remaining blanks and shows
+// "Solved!" plus the iteration count -- exactly like sudoku_gui.py's
+// SudokuGUI._on_solve.
+function attemptSolve() {
+  const grid = readGrid(solvingCells);
+  const { solved: solverSucceeded } = SudokuLogic.solve(grid);
+  const solved = solverSucceeded && isGridFullyValid(grid);
+
+  if (solved) {
+    markSolved(grid);
+    setStatus("Solved!", "success");
+    showIterationCount();
+  } else {
+    setStatus("No solution exists for the current entries.", "error");
+  }
+  updateCandidateLabels();
+  return solved;
+}
+
+// Runs after every successful guess (see onSolvingCellInput and
+// fillSelectedCellWithDigit): if the grid now has no blanks left, this
+// automatically runs the exact same logic as clicking Solve, so the person
+// never has to click it themselves once every square is filled in.
+function maybeAutoSolve() {
+  if (isGridComplete(readGrid(solvingCells))) attemptSolve();
+}
+
 document.getElementById("saveBtn").addEventListener("click", () => {
   clearIterationCount();
   const grid = readGrid(solvingCells);
@@ -522,31 +600,13 @@ document.getElementById("saveBtn").addEventListener("click", () => {
 
 document.getElementById("solveBtn").addEventListener("click", () => {
   clearSelection();
-  const grid = readGrid(solvingCells);
-  const { solved } = SudokuLogic.solve(grid);
-
-  if (solved) {
-    applyGridToEntries(grid);
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        const key = `${r},${c}`;
-        if (!givenCells.has(key)) {
-          solvingCells[key].disabled = true;
-          solvingCells[key].style.color = "var(--guess)";
-        }
-      }
-    }
-    setStatus("Solved!", "success");
-    showIterationCount();
-  } else {
-    setStatus("No solution exists for the current entries.", "error");
-  }
-  updateCandidateLabels();
+  attemptSolve();
 });
 
 document.getElementById("resetBtn").addEventListener("click", () => {
   clearSelection();
   clearIterationCount();
+  clearSolvedStyling();
   if (backupStack.length > 0) {
     const grid = backupStack.pop();
     applyGridToEntries(grid);
@@ -555,7 +615,6 @@ document.getElementById("resetBtn").addEventListener("click", () => {
   } else {
     for (const key in solvingCells) {
       if (!givenCells.has(key)) {
-        solvingCells[key].disabled = false;
         solvingCells[key].value = "";
       }
     }
