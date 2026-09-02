@@ -78,15 +78,23 @@
     flex-wrap: wrap;
   }
 
-  .entry-primary-actions {
+  .entry-side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding-top: 18px;
+    min-width: 190px;
+  }
+
+  .entry-primary-actions,
+  .entry-secondary-actions {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding-top: 18px;
-    min-width: 170px;
   }
 
-  .entry-primary-actions button { width: 100%; }
+  .entry-primary-actions button,
+  .entry-secondary-actions button { width: 100%; }
 
   .board-frame {
     background: var(--board-edge);
@@ -215,13 +223,12 @@
   button.secondary:hover { background: rgba(242,232,213,0.1); }
 
   .difficulty-picker {
-    margin-top: 16px;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     font-size: 0.85rem;
+    padding: 6px 0 2px;
   }
 
   .difficulty-picker .difficulty-label {
@@ -393,26 +400,28 @@
     <div class="entry-layout">
       <div class="board-frame">
         <div class="board">
-          <p class="hint-text" id="entryHint">Type a digit into any square you want filled &mdash; leave the rest blank.</p>
+          <p class="hint-text" id="entryHint">Type a digit into the squares you want filled.</p>
           <div class="grid" id="entryGrid"></div>
         </div>
       </div>
-      <div class="entry-primary-actions">
-        <button id="startSolvingBtn">Start Solving</button>
-        <button class="secondary" id="useSampleBtn">Use Sample Puzzle</button>
+      <div class="entry-side-panel">
+        <div class="entry-primary-actions">
+          <button id="startSolvingBtn">Start Solving</button>
+          <button class="secondary" id="useSampleBtn">Use Sample Puzzle</button>
+        </div>
+        <div class="entry-secondary-actions">
+          <button class="secondary" id="pasteBtn">Paste Puzzle</button>
+          <button class="secondary" id="createNewBtn">Create New</button>
+          <button class="secondary" id="generateBtn">Generate Puzzle</button>
+          <div class="difficulty-picker">
+            <span class="difficulty-label">Generate difficulty:</span>
+            <label><input type="radio" name="difficulty" value="Easy"> Easy</label>
+            <label><input type="radio" name="difficulty" value="Moderate"> Moderate</label>
+            <label><input type="radio" name="difficulty" value="Hard"> Hard</label>
+          </div>
+          <button class="secondary" id="entryHelpBtn">Help</button>
+        </div>
       </div>
-    </div>
-    <div class="controls">
-      <button class="secondary" id="pasteBtn">Paste Puzzle</button>
-      <button class="secondary" id="createNewBtn">Create New</button>
-      <button class="secondary" id="generateBtn">Generate Puzzle</button>
-      <button class="secondary" id="entryHelpBtn">Help</button>
-    </div>
-    <div class="difficulty-picker">
-      <span class="difficulty-label">Generate difficulty:</span>
-      <label><input type="radio" name="difficulty" value="Easy"> Easy</label>
-      <label><input type="radio" name="difficulty" value="Moderate"> Moderate</label>
-      <label><input type="radio" name="difficulty" value="Hard"> Hard</label>
     </div>
   </div>
 

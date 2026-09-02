@@ -26,7 +26,7 @@ const samplePuzzle = [
 const APP_VERSION = "1.0.0";
 const HELP_LAST_UPDATED = "September 2, 2026";
 
-const ENTRY_HINT_TEXT = "Type a digit into any square you want filled — leave the rest blank.";
+const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 
 // Caps how many backtracking guesses Paste Puzzle's validate-by-solving
 // check will spend on a pasted puzzle before giving up and treating it as
