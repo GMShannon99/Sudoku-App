@@ -70,6 +70,24 @@
     min-height: 1em;
   }
 
+  .entry-layout {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .entry-primary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 18px;
+    min-width: 170px;
+  }
+
+  .entry-primary-actions button { width: 100%; }
+
   .board-frame {
     background: var(--board-edge);
     border-radius: 10px;
@@ -235,6 +253,52 @@
   .screen { display: none; }
   .screen.active { display: block; }
 
+  .corner-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    z-index: 5;
+  }
+
+  .candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 32px);
+    gap: 4px;
+  }
+
+  .candidate-btn {
+    width: 32px;
+    height: 32px;
+    background: #fff59d;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .candidate-btn:hover { background: #fff176; }
+
+  .iteration-line {
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--board-bg);
+    background: rgba(58,44,31,0.9);
+    border: 1px solid var(--line-soft);
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  input.cell.selected {
+    background: #fff59d !important;
+  }
+
   .modal-overlay {
     display: none;
     position: fixed;
@@ -288,6 +352,15 @@
   .modal-body h3:first-child { margin-top: 0; }
 
   .modal-body p { margin: 0 0 10px; }
+
+  .modal-body p.help-meta {
+    color: var(--hint);
+    font-size: 0.8rem;
+    margin: 0 0 4px;
+  }
+
+  .modal-body p.help-meta a { color: var(--hint); }
+  .modal-body p.help-meta + p.help-meta { margin-bottom: 16px; }
   .modal-body ul { margin: 0 0 10px; padding-left: 20px; }
   .modal-body li { margin-bottom: 6px; }
 
@@ -317,15 +390,19 @@
 
   <!-- ===================== ENTRY SCREEN ===================== -->
   <div class="screen active" id="entryScreen">
-    <div class="board-frame">
-      <div class="board">
-        <p class="hint-text" id="entryHint">Type a digit into any square you want filled &mdash; leave the rest blank.</p>
-        <div class="grid" id="entryGrid"></div>
+    <div class="entry-layout">
+      <div class="board-frame">
+        <div class="board">
+          <p class="hint-text" id="entryHint">Type a digit into any square you want filled &mdash; leave the rest blank.</p>
+          <div class="grid" id="entryGrid"></div>
+        </div>
+      </div>
+      <div class="entry-primary-actions">
+        <button id="startSolvingBtn">Start Solving</button>
+        <button class="secondary" id="useSampleBtn">Use Sample Puzzle</button>
       </div>
     </div>
     <div class="controls">
-      <button id="startSolvingBtn">Start Solving</button>
-      <button class="secondary" id="useSampleBtn">Use Sample Puzzle</button>
       <button class="secondary" id="pasteBtn">Paste Puzzle</button>
       <button class="secondary" id="createNewBtn">Create New</button>
       <button class="secondary" id="generateBtn">Generate Puzzle</button>
@@ -359,11 +436,21 @@
     </div>
   </div>
 
+  <!-- Lower-right corner scratch area: candidate digits for whichever cell
+       is currently selected, plus the "Iteration: N" message once solved. -->
+  <div class="corner-panel" id="cornerPanel">
+    <div class="candidate-grid" id="candidateGrid"></div>
+    <div class="iteration-line" id="iterationLine"></div>
+  </div>
+
   <!-- ===================== HELP MODAL ===================== -->
   <div class="modal-overlay" id="helpOverlay">
     <div class="modal">
       <h2>How This App Works</h2>
       <div class="modal-body">
+        <p class="help-meta" id="helpVersionLine"></p>
+        <p class="help-meta">Author: Gil Shannon &mdash; <a href="mailto:gmshannon99@gmail.com">gmshannon99@gmail.com</a></p>
+
         <h3>Starting from a blank grid</h3>
         <p>When the grid is blank &mdash; either the first time the page loads, or right
         after clicking &ldquo;Create New&rdquo; or &ldquo;New/Clear&rdquo; &mdash; you're on the puzzle

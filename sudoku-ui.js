@@ -23,6 +23,9 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
+const APP_VERSION = "1.0.0";
+const HELP_LAST_UPDATED = "September 2, 2026";
+
 const ENTRY_HINT_TEXT = "Type a digit into any square you want filled — leave the rest blank.";
 
 // Caps how many backtracking guesses Paste Puzzle's validate-by-solving
@@ -85,6 +88,12 @@ function buildGridDOM(container, options) {
         input.disabled = true;
       } else {
         input.addEventListener("input", () => options.onCellInput(r, c, input));
+        if (options.onCellClick) {
+          // mousedown (not click/focus) so re-clicking an already-focused
+          // cell still re-shows its candidates, matching sudoku_gui.py's
+          // <Button-1> binding (fires on every press, unlike <FocusIn>).
+          input.addEventListener("mousedown", () => options.onCellClick(r, c, input));
+        }
       }
 
       wrap.appendChild(input);
@@ -141,10 +150,33 @@ function onEntryCellInput(row, col, input) {
   let v = input.value;
   if (v.length > 1) v = v[v.length - 1];
   if (v && !/[1-9]/.test(v)) v = "";
+
+  if (v) {
+    // Same row/column/box duplicate check the solving screen's
+    // onSolvingCellInput uses -- a digit already used elsewhere among the
+    // OTHER clues typed so far is rejected with a beep, so a puzzle handed
+    // off to "Start Solving" can never start out broken.
+    const digit = parseInt(v, 10);
+    const grid = readGrid(entryCells);
+    grid[row][col] = 0;
+    const { rowMissing, colMissing, boxMissing } = SudokuLogic.buildTrackingSets(grid);
+    const box = SudokuLogic.boxIndex(row, col);
+
+    const rowOk = rowMissing[row].has(digit);
+    const colOk = colMissing[col].has(digit);
+    const boxOk = boxMissing[box].has(digit);
+
+    if (!(rowOk && colOk && boxOk)) {
+      beep();
+      v = "";
+    }
+  }
+
   input.value = v;
 }
 
 function initEntryScreen() {
+  document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
   entryCells = buildGridDOM(entryGridEl, {
     editableAll: true,
     puzzleForGivens: null,
@@ -226,9 +258,28 @@ document.getElementById("pasteBtn").addEventListener("click", async () => {
 
 const solvingGridEl = document.getElementById("solvingGrid");
 const difficultyLineEl = document.getElementById("difficultyLine");
+const iterationLineEl = document.getElementById("iterationLine");
 let solvingCells = null;
 let rowMissingLabels = [];
 let colMissingLabels = [];
+
+// The backtracking-guess count computed for the ORIGINAL puzzle, back on
+// the entry screen (see computeReiterationCount / SudokuLogic.generatePuzzle
+// / the Paste Puzzle handler above) -- same value the difficulty label and
+// the "Iteration: N" message (see showIterationCount) are both driven by.
+let currentReiterationCount = 0;
+
+// Displays "Iteration: N" in the lower-right corner panel. Called whenever
+// the puzzle becomes fully solved via the Solve button.
+function showIterationCount() {
+  iterationLineEl.textContent = `Iteration: ${currentReiterationCount}`;
+}
+
+// Hides the "Iteration: N" message. Called whenever any other solving-screen
+// button is pressed, so it never lingers past the moment that prompted it.
+function clearIterationCount() {
+  iterationLineEl.textContent = "";
+}
 
 function launchSolvingScreen(puzzleGrid, reiterationCount) {
   puzzle = puzzleGrid;
@@ -239,8 +290,9 @@ function launchSolvingScreen(puzzleGrid, reiterationCount) {
     }
   }
   backupStack = [];
+  currentReiterationCount = reiterationCount;
 
-  document.getElementById("pageTitle").textContent = "Sudoku Solver";
+  document.getElementById("pageTitle").textContent = `Sudoku Solver v${APP_VERSION}`;
   difficultyLineEl.textContent = `Difficulty Level: ${SudokuLogic.rateDifficulty(reiterationCount)}`;
   document.getElementById("entryScreen").classList.remove("active");
   document.getElementById("solvingScreen").classList.add("active");
@@ -249,6 +301,7 @@ function launchSolvingScreen(puzzleGrid, reiterationCount) {
   updateCandidateLabels();
   updateBackupLine();
   setStatus("", "");
+  clearIterationCount();
 }
 
 function goToEntryScreen() {
@@ -256,13 +309,14 @@ function goToEntryScreen() {
   givenCells = new Set();
   backupStack = [];
 
-  document.getElementById("pageTitle").textContent = "Enter Your Puzzle";
+  document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
   difficultyLineEl.textContent = "";
   document.getElementById("solvingScreen").classList.remove("active");
   document.getElementById("entryScreen").classList.add("active");
 
   resetEntryGrid();
   clearEntryHint();
+  clearIterationCount();
   document.querySelectorAll('input[name="difficulty"]').forEach((radio) => {
     radio.checked = false;
   });
@@ -270,10 +324,13 @@ function goToEntryScreen() {
 
 function buildSolvingGrid() {
   solvingGridEl.innerHTML = "";
+  selectedCell = null;
+  clearCandidateButtons();
   solvingCells = buildGridDOM(solvingGridEl, {
     editableAll: false,
     puzzleForGivens: puzzle,
     onCellInput: onSolvingCellInput,
+    onCellClick: selectSolvingCell,
   });
 
   rowMissingLabels = [];
@@ -296,6 +353,92 @@ function buildSolvingGrid() {
     colMissingLabels.push(lbl);
   }
 }
+
+// The "row,col" key of the currently selected empty solving-screen cell (see
+// selectSolvingCell), or null if nothing is selected.
+let selectedCell = null;
+
+const candidateGridEl = document.getElementById("candidateGrid");
+
+// The digits that could legally go in (row, col) right now -- missing from
+// its row AND column AND box, with the cell itself treated as empty. The
+// single source of truth both typing (onSolvingCellInput) and the
+// candidate buttons (showCandidatesFor) rely on, so the two input paths
+// can never disagree about what's valid.
+function computeValidCandidates(row, col) {
+  const grid = readGrid(solvingCells);
+  grid[row][col] = 0;
+  const { rowMissing, colMissing, boxMissing } = SudokuLogic.buildTrackingSets(grid);
+  const box = SudokuLogic.boxIndex(row, col);
+  const options = [];
+  for (let digit = 1; digit <= 9; digit++) {
+    if (rowMissing[row].has(digit) && colMissing[col].has(digit) && boxMissing[box].has(digit)) {
+      options.push(digit);
+    }
+  }
+  return options;
+}
+
+function clearCandidateButtons() {
+  candidateGridEl.innerHTML = "";
+}
+
+// Un-highlights the currently selected cell (if any) and clears its
+// candidate buttons. Safe to call when nothing is selected.
+function clearSelection() {
+  if (selectedCell !== null) {
+    solvingCells[selectedCell].classList.remove("selected");
+    selectedCell = null;
+  }
+  clearCandidateButtons();
+}
+
+function showCandidatesFor(row, col) {
+  clearCandidateButtons();
+  for (const digit of computeValidCandidates(row, col)) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "candidate-btn";
+    btn.textContent = String(digit);
+    btn.addEventListener("click", () => fillSelectedCellWithDigit(digit));
+    candidateGridEl.appendChild(btn);
+  }
+}
+
+// Click handler for editable solving cells only (given cells never get this
+// binding -- see buildGridDOM). Selects this cell: highlights it yellow and
+// shows its candidate buttons. Clicking a different cell than the one
+// already selected clears the old selection first; re-clicking the same
+// cell is a no-op.
+function selectSolvingCell(row, col) {
+  const key = `${row},${col}`;
+  if (selectedCell === key) return;
+
+  clearSelection();
+  selectedCell = key;
+  solvingCells[key].classList.add("selected");
+  showCandidatesFor(row, col);
+}
+
+// Fills the selected cell with the clicked candidate digit -- same as if it
+// had been typed -- then converges on the same end state typing does:
+// highlight removed, candidate buttons cleared, side labels refreshed.
+function fillSelectedCellWithDigit(digit) {
+  if (selectedCell === null) return;
+  solvingCells[selectedCell].value = String(digit);
+  clearSelection();
+  updateCandidateLabels();
+}
+
+// Clears the selection highlight/candidates when a click lands anywhere
+// that isn't the selected cell or one of its candidate buttons -- "clicking
+// away" from the square being edited.
+document.addEventListener("mousedown", (event) => {
+  if (selectedCell === null) return;
+  if (event.target === solvingCells[selectedCell]) return;
+  if (candidateGridEl.contains(event.target)) return;
+  clearSelection();
+});
 
 function onSolvingCellInput(row, col, input) {
   let v = input.value;
@@ -320,6 +463,12 @@ function onSolvingCellInput(row, col, input) {
   }
 
   input.value = v;
+  if (v) {
+    // A digit actually landed -- same end state as picking it from the
+    // candidate buttons: drop the highlight and clear whatever candidate
+    // buttons were on screen.
+    clearSelection();
+  }
   updateCandidateLabels();
 }
 
@@ -329,7 +478,7 @@ function updateCandidateLabels() {
 
   for (let r = 0; r < 9; r++) {
     const digits = [...rowMissing[r]].sort((a, b) => a - b);
-    rowMissingLabels[r].textContent = digits.length ? digits.join(" ") : "done";
+    rowMissingLabels[r].textContent = digits.length ? digits.join(" ") : "✓";
   }
 
   for (let c = 0; c < 9; c++) {
@@ -365,12 +514,14 @@ function applyGridToEntries(grid) {
 }
 
 document.getElementById("saveBtn").addEventListener("click", () => {
+  clearIterationCount();
   const grid = readGrid(solvingCells);
   backupStack.push(grid);
   updateBackupLine();
 });
 
 document.getElementById("solveBtn").addEventListener("click", () => {
+  clearSelection();
   const grid = readGrid(solvingCells);
   const { solved } = SudokuLogic.solve(grid);
 
@@ -386,6 +537,7 @@ document.getElementById("solveBtn").addEventListener("click", () => {
       }
     }
     setStatus("Solved!", "success");
+    showIterationCount();
   } else {
     setStatus("No solution exists for the current entries.", "error");
   }
@@ -393,6 +545,8 @@ document.getElementById("solveBtn").addEventListener("click", () => {
 });
 
 document.getElementById("resetBtn").addEventListener("click", () => {
+  clearSelection();
+  clearIterationCount();
   if (backupStack.length > 0) {
     const grid = backupStack.pop();
     applyGridToEntries(grid);
@@ -411,6 +565,7 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 });
 
 document.getElementById("newClearBtn").addEventListener("click", () => {
+  clearIterationCount();
   const confirmed = window.confirm(
     "This will discard the current puzzle and all saved backups. Are you " +
     "sure you want to continue?"
@@ -424,6 +579,8 @@ document.getElementById("newClearBtn").addEventListener("click", () => {
 const helpOverlayEl = document.getElementById("helpOverlay");
 
 function showHelp() {
+  document.getElementById("helpVersionLine").textContent =
+    `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
   helpOverlayEl.classList.add("active");
 }
 
@@ -435,7 +592,10 @@ document.getElementById("entryHelpBtn").addEventListener("click", () => {
   clearEntryHint();
   showHelp();
 });
-document.getElementById("solvingHelpBtn").addEventListener("click", showHelp);
+document.getElementById("solvingHelpBtn").addEventListener("click", () => {
+  clearIterationCount();
+  showHelp();
+});
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
