@@ -59,6 +59,11 @@ let backupStack = [];
 // by clicking Save.
 let moveHistory = [];
 
+// Moves popped off moveHistory by Ctrl+Z, so Ctrl+Shift+Z can restore them.
+// Cleared whenever a new move is recorded, since redoing past a fresh move
+// would overwrite it with stale state.
+let redoStack = [];
+
 function beep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -311,6 +316,7 @@ function launchSolvingScreen(puzzleGrid, reiterationCount) {
   }
   backupStack = [];
   moveHistory = [];
+  redoStack = [];
   currentReiterationCount = reiterationCount;
 
   document.getElementById("pageTitle").textContent = `Sudoku Solver v${APP_VERSION}`;
@@ -330,6 +336,7 @@ function goToEntryScreen() {
   givenCells = new Set();
   backupStack = [];
   moveHistory = [];
+  redoStack = [];
 
   document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
   difficultyLineEl.textContent = "";
@@ -449,7 +456,7 @@ function fillSelectedCellWithDigit(digit) {
   if (selectedCell === null) return;
   const [row, col] = selectedCell.split(",").map(Number);
   solvingCells[selectedCell].value = String(digit);
-  recordMove(row, col);
+  recordMove(row, col, digit);
   clearSelection();
   updateCandidateLabels();
   maybeAutoSolve();
@@ -492,7 +499,7 @@ function onSolvingCellInput(row, col, input) {
     // A digit actually landed -- same end state as picking it from the
     // candidate buttons: drop the highlight and clear whatever candidate
     // buttons were on screen.
-    recordMove(row, col);
+    recordMove(row, col, parseInt(v, 10));
     clearSelection();
   }
   updateCandidateLabels();
@@ -656,6 +663,7 @@ document.getElementById("resetBtn").addEventListener("click", () => {
   // moves recorded before this Reset no longer correspond to cells Ctrl+Z
   // should be undoing.
   moveHistory = [];
+  redoStack = [];
   if (backupStack.length > 0) {
     const grid = backupStack.pop();
     applyGridToEntries(grid);
@@ -686,27 +694,44 @@ document.getElementById("newClearBtn").addEventListener("click", () => {
 
 // Appends one entered digit to moveHistory. Called from both digit-entry
 // paths (typing and the candidate buttons) so Ctrl+Z can undo either kind of
-// move the same way.
-function recordMove(row, col) {
-  moveHistory.push({ row, col });
+// move the same way. A fresh move invalidates whatever had been undone
+// before it, since redoing past it would overwrite it with stale state.
+function recordMove(row, col, digit) {
+  moveHistory.push({ row, col, digit });
+  redoStack = [];
 }
 
-// Pops the most recent move and clears that square -- simply clears rather
-// than restoring a prior digit, since a filled cell can only be overwritten
-// by first clearing/selecting it, so there's nothing meaningful to restore
-// it to. Also reverses markSolved()'s disabling/recoloring and drops the
-// iteration count, so undoing a move after the puzzle auto-solved leaves the
-// grid genuinely editable again instead of blank-but-locked.
+// Pops the most recent move, clears that square, and stashes the move on
+// redoStack so Ctrl+Shift+Z can put the digit back. Also reverses
+// markSolved()'s disabling/recoloring and drops the iteration count, so
+// undoing a move after the puzzle auto-solved leaves the grid genuinely
+// editable again instead of blank-but-locked.
 function undoLastMove() {
   if (moveHistory.length === 0) return;
-  const { row, col } = moveHistory.pop();
+  const move = moveHistory.pop();
+  redoStack.push(move);
 
   clearSelection();
   clearSolvedStyling();
   clearIterationCount();
   setStatus("", "");
-  solvingCells[`${row},${col}`].value = "";
+  solvingCells[`${move.row},${move.col}`].value = "";
   updateCandidateLabels();
+}
+
+// Pops the most recently undone move and re-fills that square, putting the
+// move back on moveHistory so it can be undone again. Runs the same
+// maybeAutoSolve check the original entry did, in case redoing completes
+// the puzzle.
+function redoLastMove() {
+  if (redoStack.length === 0) return;
+  const move = redoStack.pop();
+  moveHistory.push(move);
+
+  clearSelection();
+  solvingCells[`${move.row},${move.col}`].value = String(move.digit);
+  updateCandidateLabels();
+  maybeAutoSolve();
 }
 
 /* ===================== HELP MODAL ===================== */
@@ -738,12 +763,14 @@ helpOverlayEl.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideHelp();
 
-  // !event.shiftKey rules out Ctrl+Shift+Z (a common browser "redo" chord)
-  // being mistaken for undo.
-  if (!event.shiftKey && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     if (document.getElementById("solvingScreen").classList.contains("active")) {
       event.preventDefault();
-      undoLastMove();
+      if (event.shiftKey) {
+        redoLastMove();
+      } else {
+        undoLastMove();
+      }
     }
   }
 });
