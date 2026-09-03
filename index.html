@@ -126,7 +126,12 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(9, 34px) 90px;
+    /* The trailing column holds the row-missing labels, which can read up
+       to "1 2 3 4 5 6 7 8 9" (167px at this font/letter-spacing, measured
+       via a hidden .row-missing probe) -- 190px comfortably fits that
+       worst case plus margin, well past the previous 90px that started
+       clipping labels at just 5 digits. */
+    grid-template-columns: repeat(9, 34px) 190px;
     grid-template-rows: repeat(9, 34px) auto;
     gap: 2px;
   }
@@ -361,14 +366,16 @@
 
   .modal-body p { margin: 0 0 10px; }
 
+  .help-meta-block { margin-bottom: 16px; }
+
   .modal-body p.help-meta {
     color: var(--hint);
     font-size: 0.8rem;
     margin: 0 0 4px;
   }
 
+  .modal-body p.help-meta:last-child { margin-bottom: 0; }
   .modal-body p.help-meta a { color: var(--hint); }
-  .modal-body p.help-meta + p.help-meta { margin-bottom: 16px; }
   .modal-body ul { margin: 0 0 10px; padding-left: 20px; }
   .modal-body li { margin-bottom: 6px; }
 
@@ -380,11 +387,12 @@
 
   @media (max-width: 520px) {
     .grid {
-      grid-template-columns: repeat(9, 28px) 70px;
+      grid-template-columns: repeat(9, 28px) 150px;
       grid-template-rows: repeat(9, 28px) auto;
     }
     input.cell { width: 26px; height: 26px; font-size: 0.95rem; }
     .col-missing { width: 28px; font-size: 0.7rem; }
+    .row-missing { font-size: 0.75rem; }
   }
 </style>
 </head>
@@ -435,6 +443,7 @@
     </div>
     <div class="controls">
       <button id="saveBtn">Save</button>
+      <button class="secondary" id="writeToFileBtn">Write to File</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
@@ -458,8 +467,12 @@
     <div class="modal">
       <h2>How This App Works</h2>
       <div class="modal-body">
-        <p class="help-meta" id="helpVersionLine"></p>
-        <p class="help-meta">Author: Gil Shannon &mdash; <a href="mailto:gmshannon99@gmail.com">gmshannon99@gmail.com</a></p>
+        <div class="help-meta-block">
+          <p class="help-meta" id="helpVersionLine"></p>
+          <p class="help-meta">Author: Gil Shannon &mdash; <a href="mailto:gmshannon99@gmail.com">gmshannon99@gmail.com</a></p>
+          <p class="help-meta">Note: Any comments, questions, or bug reports can be sent to the above email.</p>
+          <p class="help-meta">This project is open source. View the code on GitHub: <a href="https://GMShannon99.github.io/sudoku-web/">https://GMShannon99.github.io/sudoku-web/</a></p>
+        </div>
 
         <h3>Starting from a blank grid</h3>
         <p>When the grid is blank &mdash; either the first time the page loads, or right

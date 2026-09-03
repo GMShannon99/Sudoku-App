@@ -35,6 +35,20 @@ const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 // take an impractically long time to prove).
 const PASTE_VALIDATION_MAX_ITERATIONS = 50_000;
 
+// File Write to File downloads. Deliberately the same filename and record
+// format sudoku_gui.py's Save to File writes to Sudoku_Save.txt with --
+// 81 grid digits (row by row, 0 for blank), followed by one difficulty
+// letter (E/M/H) -- so a downloaded file is structurally the exact same
+// "single valid record" Paste Puzzle already knows how to parse back in
+// (see SudokuLogic.parseSaveRecord). Unlike sudoku_gui.py's version (which
+// always saves the puzzle's ORIGINAL givens only), this saves the CURRENT
+// grid -- givens plus whatever guesses have been entered so far -- since
+// that's what was asked for here; re-loading a partially-solved download
+// via Paste Puzzle will treat every filled-in cell as a given, which is an
+// accepted consequence of reusing this given-clue-oriented file format for
+// a live snapshot instead of a pure puzzle definition.
+const SAVE_FILE_NAME = "Sudoku_Save.txt";
+
 let puzzle = null;
 let givenCells = new Set();
 let backupStack = [];
@@ -596,6 +610,26 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   const grid = readGrid(solvingCells);
   backupStack.push(grid);
   updateBackupLine();
+});
+
+document.getElementById("writeToFileBtn").addEventListener("click", () => {
+  clearIterationCount();
+
+  const grid = readGrid(solvingCells);
+  const record =
+    grid.flat().join("") + SudokuLogic.rateDifficulty(currentReiterationCount)[0]; // E/M/H
+
+  const blob = new Blob([record + "\n"], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = SAVE_FILE_NAME;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  setStatus(`Saved to ${SAVE_FILE_NAME}.`, "success");
 });
 
 document.getElementById("solveBtn").addEventListener("click", () => {
