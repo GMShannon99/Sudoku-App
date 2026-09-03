@@ -285,8 +285,13 @@
   }
 
   .candidate-grid {
+    grid-column: 10;
+    grid-row: 10;
+    align-self: center;
+    justify-self: center;
     display: grid;
     grid-template-columns: repeat(3, 32px);
+    grid-auto-rows: 32px;
     gap: 4px;
   }
 
@@ -400,6 +405,8 @@
     input.cell { width: 26px; height: 26px; font-size: 0.95rem; }
     .col-missing { width: 28px; font-size: 0.7rem; }
     .row-missing { font-size: 0.75rem; }
+    .candidate-grid { grid-template-columns: repeat(3, 26px); grid-auto-rows: 26px; gap: 3px; }
+    .candidate-btn { width: 26px; height: 26px; font-size: 0.85rem; }
   }
 </style>
 </head>
@@ -463,10 +470,15 @@
     </div>
   </div>
 
-  <!-- Lower-right corner scratch area: candidate digits for whichever cell
-       is currently selected, plus the "Iteration: N" message once solved. -->
+  <!-- Candidate digits for whichever solving-grid cell is currently
+       selected. Lives here as a detached placeholder; buildSolvingGrid()
+       moves it into solvingGrid's bottom-right corner cell (column 10,
+       row 10 -- the spot left empty by the row/column-missing labels). -->
+  <div class="candidate-grid" id="candidateGrid"></div>
+
+  <!-- Lower-right corner of the viewport: the "Iteration: N" message once
+       solved. -->
   <div class="corner-panel" id="cornerPanel">
-    <div class="candidate-grid" id="candidateGrid"></div>
     <div class="iteration-line" id="iterationLine"></div>
   </div>
 

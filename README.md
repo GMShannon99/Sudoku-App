@@ -24,7 +24,7 @@ Both the entry screen and the solving screen enforce the same rule as you type: 
 
 ### Click-to-see candidates
 
-Clicking an empty square on the solving screen highlights it in yellow and shows that square's currently valid candidate digits as small yellow buttons in the lower-right corner of the page. Clicking a candidate fills it in for you; typing a digit directly works too. Either way, the highlight and candidate buttons clear automatically once a value is entered.
+Clicking an empty square on the solving screen highlights it in yellow and shows that square's currently valid candidate digits as small yellow buttons in the board's bottom-right corner, next to the row/column-missing labels. Clicking a candidate fills it in for you; typing a digit directly works too. The highlight and candidate buttons clear automatically once a value is entered, and also clear on any other key press or mouse click elsewhere on the page — clicking away, pressing Escape, Ctrl+Z/Ctrl+Shift+Z, arrow keys, and so on all dismiss them without filling the square.
 
 ### Live row/column tracking
 
@@ -56,7 +56,7 @@ A **Help** button (available on both screens) opens an in-app documentation moda
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.0").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.1").
 
 ### Analytics
 
@@ -77,7 +77,7 @@ npm test
 
 ## File structure
 
-- **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including both screens (entry and solving), the candidate/iteration corner panel, and the Help modal.
+- **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including both screens (entry and solving), the candidate buttons (placed into the solving grid's bottom-right corner cell by `sudoku-ui.js`), the "Iteration: N" corner panel, and the Help modal.
 - **`sudoku-logic.js`** — pure puzzle-solving logic with no DOM dependencies: tracking sets for rows/columns/boxes, naked-singles propagation, MRV backtracking search, solution counting/uniqueness checks, difficulty rating, puzzle generation, and save-record parsing. Works equally under Node or in the browser.
 - **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, and the Help modal. Relies entirely on `sudoku-logic.js` for the actual solving rules.
 - **`tests/`** — the undo/redo test suite described above.

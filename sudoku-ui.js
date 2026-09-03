@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.0";
-const HELP_LAST_UPDATED = "September 2, 2026";
+const APP_VERSION = "1.0.1";
+const HELP_LAST_UPDATED = "September 3, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 
@@ -381,6 +381,12 @@ function buildSolvingGrid() {
     solvingGridEl.appendChild(lbl);
     colMissingLabels.push(lbl);
   }
+
+  // solvingGridEl.innerHTML = "" above detached candidateGridEl from any
+  // earlier puzzle -- move it (not clone) into the grid's bottom-right
+  // corner cell (column 10, row 10), left empty by the row/column-missing
+  // labels above and to the left of it.
+  solvingGridEl.appendChild(candidateGridEl);
 }
 
 // The "row,col" key of the currently selected empty solving-screen cell (see
@@ -761,6 +767,13 @@ helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
 });
 document.addEventListener("keydown", (event) => {
+  // Any key press -- other than clicking a candidate button or the selected
+  // cell itself, which don't go through here -- clears the candidate
+  // display first. The input event a digit key triggers still fires after
+  // this (browsers dispatch keydown before input), so typing itself is
+  // unaffected; only the yellow highlight/candidate buttons drop early.
+  if (selectedCell !== null) clearSelection();
+
   if (event.key === "Escape") hideHelp();
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
