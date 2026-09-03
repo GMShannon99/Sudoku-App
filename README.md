@@ -35,6 +35,10 @@ The numbers to the right of each row and below each column show every digit stil
 - **Save** takes an in-memory snapshot of the grid exactly as it stands (givens plus everything you've typed so far). Each click adds another backup, and a running count ("N screen backups") is displayed.
 - **Reset** restores the most recently saved backup, or — if nothing has been saved yet — clears the grid back to the puzzle's original clues.
 
+### Undo (Ctrl+Z)
+
+On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — whether the digit was typed directly or filled in by clicking a candidate button — clearing that square and updating the row/column candidate labels. Repeated presses step back through your moves one at a time, most recent first. If a move is undone after the puzzle has auto-solved, the affected square becomes editable again instead of staying locked and brown. This history is separate from the Save/Reset backups above: starting a new puzzle or clicking Reset both clear it, since either one establishes a fresh starting point.
+
 ### Solving
 
 - **Solve** runs the app's solver (naked-singles propagation, then MRV backtracking) and fills in every remaining empty cell.
