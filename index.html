@@ -248,6 +248,13 @@
     cursor: pointer;
   }
 
+  .write-file-note {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--hint);
+  }
+
   .messages {
     margin-top: 14px;
     text-align: center;
@@ -443,12 +450,13 @@
     </div>
     <div class="controls">
       <button id="saveBtn">Save</button>
-      <button class="secondary" id="writeToFileBtn">Write to File</button>
+      <button class="secondary" id="writeToFileBtn" title="Each save creates a new file in your browser's default downloads folder.">Write to File</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
       <button class="secondary" id="newClearBtn">New/Clear</button>
     </div>
+    <p class="write-file-note">Each save creates a new file in your browser's default downloads folder.</p>
     <div class="messages">
       <div class="status-line" id="statusLine"></div>
       <div class="status-line info" id="backupLine"></div>
