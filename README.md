@@ -66,11 +66,21 @@ The page includes [GoatCounter](https://www.goatcounter.com/) analytics tracking
 
 This is a static site with no server or build step. Just open `index.html` directly in a browser, or serve the folder with any static file server if you prefer.
 
+## Tests
+
+The undo/redo history in `sudoku-ui.js` has a Node-based test suite that drives the real DOM (via [jsdom](https://github.com/jsdom/jsdom)) exactly as a user would — clicking buttons, typing digits, dispatching Ctrl+Z/Ctrl+Shift+Z keydowns — rather than calling internal functions directly.
+
+```
+npm install
+npm test
+```
+
 ## File structure
 
 - **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including both screens (entry and solving), the candidate/iteration corner panel, and the Help modal.
 - **`sudoku-logic.js`** — pure puzzle-solving logic with no DOM dependencies: tracking sets for rows/columns/boxes, naked-singles propagation, MRV backtracking search, solution counting/uniqueness checks, difficulty rating, puzzle generation, and save-record parsing. Works equally under Node or in the browser.
 - **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, and the Help modal. Relies entirely on `sudoku-logic.js` for the actual solving rules.
+- **`tests/`** — the undo/redo test suite described above.
 
 ## Credits
 
