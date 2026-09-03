@@ -298,6 +298,14 @@
   .candidate-btn {
     width: 32px;
     height: 32px;
+    /* Reset the generic button rule's 9px/18px padding and opt out of grid
+       items' default min-width/min-height:auto -- both would otherwise
+       force this button wider than its explicit width (its min-content
+       width, padding included, exceeds 32px), which only became visibly
+       broken once the mobile tiers below shrank it further. */
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
     background: #fff59d;
     border: 1px solid var(--line);
     border-radius: 3px;
@@ -407,6 +415,38 @@
     .row-missing { font-size: 0.75rem; }
     .candidate-grid { grid-template-columns: repeat(3, 26px); grid-auto-rows: 26px; gap: 3px; }
     .candidate-btn { width: 26px; height: 26px; font-size: 0.85rem; }
+  }
+
+  /* Below ~500px the 520px tier above still overflows horizontally (its
+     28px-cell/150px-label grid needs ~500px to fit) -- these two extra
+     tiers shrink cells, the row/column-missing label column, and the
+     board's own padding further so real small-phone widths (down to a
+     320px baseline) stay inside the viewport with no horizontal scroll. */
+  @media (max-width: 500px) {
+    body { padding-left: 10px; padding-right: 10px; }
+    .board-frame { padding: 12px; }
+    .board { padding: 12px 12px 16px; }
+    .grid {
+      grid-template-columns: repeat(9, 23px) 128px;
+      grid-template-rows: repeat(9, 23px) auto;
+    }
+    input.cell { width: 21px; height: 21px; font-size: 0.8rem; }
+    .col-missing { width: 23px; font-size: 0.6rem; }
+    .row-missing { font-size: 0.62rem; padding-left: 7px; }
+    .candidate-grid { grid-template-columns: repeat(3, 21px); grid-auto-rows: 21px; gap: 3px; }
+    .candidate-btn { width: 21px; height: 21px; font-size: 0.75rem; }
+  }
+
+  @media (max-width: 400px) {
+    .grid {
+      grid-template-columns: repeat(9, 16px) 100px;
+      grid-template-rows: repeat(9, 16px) auto;
+    }
+    input.cell { width: 14px; height: 14px; font-size: 0.6rem; }
+    .col-missing { width: 16px; font-size: 0.48rem; }
+    .row-missing { font-size: 0.48rem; padding-left: 4px; }
+    .candidate-grid { grid-template-columns: repeat(3, 14px); grid-auto-rows: 14px; gap: 2px; }
+    .candidate-btn { width: 14px; height: 14px; font-size: 0.55rem; }
   }
 </style>
 </head>
