@@ -55,9 +55,13 @@ The **Write to File** button exports the current grid (givens plus whatever you'
 
 A **Help** button (available on both screens) opens an in-app documentation modal with two top-level sections: a general "How to Play Sudoku" primer on the rules of the game itself, followed by "Sudoku Web Functionality," covering every app feature above, along with the author's name and contact email, the current version number, and the date it was last updated.
 
+### Puzzle stats
+
+A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. Clicking it fetches the site's total visit count from GoatCounter's public counter endpoint and shows it right there in the modal — read-only, public data, with no login involved. This button is the **only** place in the app where that count is ever shown; it's never displayed inline elsewhere on the page, and nothing is fetched until it's clicked. If the request fails, times out, or GoatCounter's response isn't shaped as expected, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
+
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.5").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.6").
 
 ### Analytics
 

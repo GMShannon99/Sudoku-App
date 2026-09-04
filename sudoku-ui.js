@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 const HELP_LAST_UPDATED = "September 4, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -784,10 +784,73 @@ function redoLastMove() {
 /* ===================== HELP MODAL ===================== */
 
 const helpOverlayEl = document.getElementById("helpOverlay");
+const statsResultEl = document.getElementById("statsResult");
+
+// GoatCounter's public "visitor counter" endpoint -- a read-only, no-login
+// JSON/image/HTML endpoint meant for embedding on third-party pages (see
+// https://www.goatcounter.com/help/visitor-counter), NOT the dashboard at
+// sudoku-gilshannon.goatcounter.com itself. The special "TOTAL" path (no
+// leading slash, case-sensitive) asks for the site-wide visit count rather
+// than one page's. Requires the site owner to have turned on "Allow adding
+// visitor counts on your website" in GoatCounter's settings -- until that's
+// done this 403s, which showPuzzleStats() below treats the same as any
+// other failure.
+const GOATCOUNTER_CODE = "sudoku-gilshannon";
+const STATS_URL = `https://${GOATCOUNTER_CODE}.goatcounter.com/counter/TOTAL.json`;
+const STATS_FETCH_TIMEOUT_MS = 6000;
+
+// Hides and clears any previously shown stats. Called every time the Help
+// modal opens so "View Puzzle Stats" always has to be clicked fresh --
+// stats never linger into a later Help visit without that click.
+function resetStatsResult() {
+  statsResultEl.hidden = true;
+  statsResultEl.classList.remove("error");
+  statsResultEl.textContent = "";
+}
+
+// Fetches the site's total visit count from GoatCounter's public counter
+// endpoint and renders it into statsResultEl -- or a plain "unavailable"
+// message if the request fails, times out, or the response isn't shaped
+// the way GoatCounter's docs say it should be. Built with textContent/DOM
+// nodes rather than innerHTML since `count` comes from a third party.
+async function showPuzzleStats() {
+  statsResultEl.hidden = false;
+  statsResultEl.classList.remove("error");
+  statsResultEl.textContent = "Loading puzzle stats…";
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(STATS_URL, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
+
+    const data = await response.json();
+    if (typeof data.count !== "string" && typeof data.count !== "number") {
+      throw new Error("Unexpected response shape from GoatCounter.");
+    }
+
+    statsResultEl.textContent = "";
+    statsResultEl.append("Total visits: ");
+    const strong = document.createElement("strong");
+    strong.textContent = String(data.count);
+    statsResultEl.append(strong);
+    const note = document.createElement("span");
+    note.className = "stats-note";
+    note.textContent = "Public GoatCounter data — read-only, no login required.";
+    statsResultEl.append(note);
+  } catch (e) {
+    statsResultEl.classList.add("error");
+    statsResultEl.textContent = "Puzzle stats are currently unavailable.";
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 function showHelp() {
   document.getElementById("helpVersionLine").textContent =
     `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
+  resetStatsResult();
   helpOverlayEl.classList.add("active");
 }
 
@@ -803,6 +866,7 @@ document.getElementById("solvingHelpBtn").addEventListener("click", () => {
   clearIterationCount();
   showHelp();
 });
+document.getElementById("statsBtn").addEventListener("click", showPuzzleStats);
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();

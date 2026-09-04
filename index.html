@@ -428,7 +428,22 @@
     padding: 14px 22px 18px;
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
   }
+
+  /* Populated only after clicking "View Puzzle Stats" (see statsBtn's
+     handler in sudoku-ui.js) -- hidden the rest of the time, and re-hidden
+     every time the Help modal opens, so this is the only place stats are
+     ever shown and only ever as a direct result of that click. */
+  .stats-result {
+    padding: 0 22px 14px;
+    font-size: 0.8rem;
+    color: var(--hint);
+    border-top: 1px solid rgba(184,163,127,0.25);
+  }
+
+  .stats-result.error { color: var(--accent); }
+  .stats-result .stats-note { display: block; margin-top: 2px; font-size: 0.75rem; }
 
   @media (max-width: 520px) {
     .grid {
@@ -672,8 +687,16 @@
         <p>Once a puzzle is loaded onto the solving screen, a &ldquo;Difficulty Level&rdquo;
         line appears above the grid: Easy, Moderate, or Hard, based on how many
         backtracking guesses the solver needed for this exact puzzle.</p>
+
+        <h3>Puzzle stats</h3>
+        <p>The &ldquo;View Puzzle Stats&rdquo; button below shows the site's total visit
+        count, pulled live from the public GoatCounter counter for this site &mdash;
+        read-only, public data, no login involved. This button is the only place in
+        the app where that count is ever shown; it stays hidden otherwise.</p>
       </div>
+      <div class="stats-result" id="statsResult" hidden></div>
       <div class="modal-footer">
+        <button class="secondary" id="statsBtn">View Puzzle Stats</button>
         <button id="helpCloseBtn">Close</button>
       </div>
     </div>
