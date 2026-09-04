@@ -336,8 +336,9 @@
      solved (see markSolved()/showSolvedHighlight() in sudoku-ui.js) --
      deliberately a deeper gold than .selected's/.candidate-btn's pale
      #fff59d so the two yellows read as distinct states rather than looking
-     like a leftover selection highlight. Clears on the very next click,
-     button press, or key press (clearSolvedHighlight()). */
+     like a leftover selection highlight. Persists as long as the grid
+     stays solved -- cleared only by Reset, Undo, or New/Clear
+     (clearSolvedHighlight()), not by mere clicking or key pressing. */
   input.cell.solved-highlight {
     background: #ffe066 !important;
   }
@@ -649,8 +650,9 @@
           <li><strong>Solve</strong> &mdash; Runs the full solver and fills in every remaining
           empty cell to complete the puzzle. The same thing happens automatically if
           you fill in the last empty square yourself. Either way, every square you
-          filled in briefly flashes yellow, then reverts to normal on your very next
-          click, key press, or button press.</li>
+          filled in flashes yellow and stays that way &mdash; clicking around or pressing
+          keys won't clear it &mdash; until the puzzle actually changes, via Reset, Undo,
+          or New/Clear.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>

@@ -45,7 +45,7 @@ On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — wh
 - The puzzle also **auto-solves** the moment you fill in the last empty square yourself — no need to click Solve at all if you finish it by hand.
 - Once solved, an **"Iteration: N"** message appears in the corner, showing how many backtracking guesses the solver needed (0 means it solved purely through naked-singles logic, with no guessing required).
 - Every guessed (non-given) cell turns a blue color once the puzzle is solved, while keeping its white background — visually distinguishing your solved entries from the original clues.
-- On top of that, every guessed cell also flashes a yellow success background the instant the puzzle is solved — via Solve or auto-solve alike — which clears back to normal on your very next click, key press, or button press.
+- On top of that, every guessed cell also flashes a yellow success background the instant the puzzle is solved — via Solve or auto-solve alike — which stays lit for as long as the grid remains completely and correctly solved. Clicking around or pressing keys doesn't clear it; only Reset, Undo, or New/Clear (i.e. the puzzle actually changing) does. Redoing back to a complete, correct grid brings the yellow back.
 
 ### Write to File
 
@@ -57,7 +57,7 @@ A **Help** button (available on both screens) opens an in-app documentation moda
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.4").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.5").
 
 ### Analytics
 
