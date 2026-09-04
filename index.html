@@ -382,6 +382,20 @@
     margin: 18px 0 6px;
   }
 
+  /* Top-level sections inside the modal body (above the h3 subsections) --
+     overrides .modal h2's dialog-title styling, which would otherwise also
+     match these since they're nested inside .modal. */
+  .modal-body h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--board-bg);
+    margin: 20px 0 10px;
+    padding: 0 0 6px;
+    border: none;
+    border-bottom: 1px solid rgba(184,163,127,0.4);
+  }
+
   .modal-body h3:first-child { margin-top: 0; }
 
   .modal-body p { margin: 0 0 10px; }
@@ -534,6 +548,26 @@
           <p class="help-meta">This project is open source. View the code on GitHub: <a href="https://GMShannon99.github.io/sudoku-web/">https://GMShannon99.github.io/sudoku-web/</a></p>
         </div>
 
+        <h2>How to Play Sudoku</h2>
+        <p>Sudoku is played on a 9&times;9 grid divided into nine 3&times;3 boxes. The
+        goal is to fill every empty square so that each row, each column, and each
+        3&times;3 box contains every digit from 1 to 9 exactly once &mdash; no digit
+        ever repeats within the same row, column, or box.</p>
+        <p>Every puzzle starts with a handful of <strong>givens</strong> (or clues):
+        squares that are already filled in and can't be changed. Every other square
+        starts out empty and is yours to work out and fill in.</p>
+        <p>The most basic solving technique is <strong>elimination</strong>: a square
+        can only hold a digit that isn't already used somewhere else in its row, its
+        column, or its 3&times;3 box. Solving a puzzle usually means repeatedly
+        narrowing down each empty square's possibilities until only one digit can
+        legally go there.</p>
+        <p>Easier puzzles can be fully solved with elimination alone. Harder ones
+        eventually stall &mdash; every remaining empty square still has more than one
+        possible digit &mdash; and need deeper logical techniques, or educated trial
+        and error (trying a digit, following where it leads, and backing out if it
+        creates a contradiction), to finish.</p>
+
+        <h2>Sudoku Web Functionality</h2>
         <h3>Starting from a blank grid</h3>
         <p>When the grid is blank &mdash; either the first time the page loads, or right
         after clicking &ldquo;Create New&rdquo; or &ldquo;New/Clear&rdquo; &mdash; you're on the puzzle

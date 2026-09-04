@@ -52,11 +52,11 @@ The **Write to File** button exports the current grid (givens plus whatever you'
 
 ### Help
 
-A **Help** button (available on both screens) opens an in-app documentation modal covering every feature above, along with the author's name and contact email, the current version number, and the date it was last updated.
+A **Help** button (available on both screens) opens an in-app documentation modal with two top-level sections: a general "How to Play Sudoku" primer on the rules of the game itself, followed by "Sudoku Web Functionality," covering every app feature above, along with the author's name and contact email, the current version number, and the date it was last updated.
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.1").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.2").
 
 ### Analytics
 
