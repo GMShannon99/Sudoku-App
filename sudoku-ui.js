@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 const HELP_LAST_UPDATED = "September 4, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -470,8 +470,14 @@ function fillSelectedCellWithDigit(digit) {
 
 // Clears the selection highlight/candidates when a click lands anywhere
 // that isn't the selected cell or one of its candidate buttons -- "clicking
-// away" from the square being edited.
+// away" from the square being edited. Also clears the post-solve yellow
+// flash on ANY click anywhere (including on the still-selected cell or a
+// candidate button, and even though solved cells are disabled and can't
+// trigger this some other way), since that highlight has no "selected
+// cell" concept of its own to protect.
 document.addEventListener("mousedown", (event) => {
+  clearSolvedHighlight();
+
   if (selectedCell === null) return;
   if (event.target === solvingCells[selectedCell]) return;
   if (candidateGridEl.contains(event.target)) return;
@@ -585,6 +591,7 @@ function markSolved(grid) {
       }
     }
   }
+  showSolvedHighlight();
 }
 
 // Undoes markSolved()'s disabling/recoloring -- re-enables every guessed
@@ -599,6 +606,38 @@ function clearSolvedStyling() {
       solvingCells[key].style.color = "";
     }
   }
+}
+
+// Whether every guessed cell currently has the .solved-highlight yellow
+// flash applied -- lets clearSolvedHighlight() no-op cheaply instead of
+// walking all 81 cells on every click/keypress when there's nothing to
+// clear.
+let solvedHighlightActive = false;
+
+// Adds the yellow success-flash background to every guessed (non-given)
+// cell, on top of whatever markSolved() already did (disabling, blue
+// text). Left as its own function/class -- separate from .selected --
+// so this success flash and the click-to-select highlight never fight
+// over the same class or state.
+function showSolvedHighlight() {
+  for (const key in solvingCells) {
+    if (!givenCells.has(key)) {
+      solvingCells[key].classList.add("solved-highlight");
+    }
+  }
+  solvedHighlightActive = true;
+}
+
+// Removes the yellow success flash -- and only that -- leaving disabled
+// state and the blue solved-text color untouched (clearSolvedStyling()
+// owns those). Called on the very next click, button press, or key press
+// after a solve, from the shared listeners/handlers below.
+function clearSolvedHighlight() {
+  if (!solvedHighlightActive) return;
+  for (const key in solvingCells) {
+    solvingCells[key].classList.remove("solved-highlight");
+  }
+  solvedHighlightActive = false;
 }
 
 // Shared by the Solve button and the auto-solve check below: validates the
@@ -630,6 +669,7 @@ function maybeAutoSolve() {
 }
 
 document.getElementById("saveBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearIterationCount();
   const grid = readGrid(solvingCells);
   backupStack.push(grid);
@@ -637,6 +677,7 @@ document.getElementById("saveBtn").addEventListener("click", () => {
 });
 
 document.getElementById("writeToFileBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearIterationCount();
 
   const grid = readGrid(solvingCells);
@@ -657,11 +698,13 @@ document.getElementById("writeToFileBtn").addEventListener("click", () => {
 });
 
 document.getElementById("solveBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearSelection();
   attemptSolve();
 });
 
 document.getElementById("resetBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearSelection();
   clearIterationCount();
   clearSolvedStyling();
@@ -687,6 +730,7 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 });
 
 document.getElementById("newClearBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearIterationCount();
   const confirmed = window.confirm(
     "This will discard the current puzzle and all saved backups. Are you " +
@@ -759,6 +803,7 @@ document.getElementById("entryHelpBtn").addEventListener("click", () => {
   showHelp();
 });
 document.getElementById("solvingHelpBtn").addEventListener("click", () => {
+  clearSolvedHighlight();
   clearIterationCount();
   showHelp();
 });
@@ -767,11 +812,14 @@ helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
 });
 document.addEventListener("keydown", (event) => {
-  // Any key press -- other than clicking a candidate button or the selected
-  // cell itself, which don't go through here -- clears the candidate
-  // display first. The input event a digit key triggers still fires after
-  // this (browsers dispatch keydown before input), so typing itself is
-  // unaffected; only the yellow highlight/candidate buttons drop early.
+  // Any key press clears the post-solve yellow flash first (see
+  // clearSolvedHighlight()), then -- other than clicking a candidate
+  // button or the selected cell itself, which don't go through here --
+  // clears the candidate display too. The input event a digit key
+  // triggers still fires after this (browsers dispatch keydown before
+  // input), so typing itself is unaffected; only these highlights drop
+  // early.
+  clearSolvedHighlight();
   if (selectedCell !== null) clearSelection();
 
   if (event.key === "Escape") hideHelp();
