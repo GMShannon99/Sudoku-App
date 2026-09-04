@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.2";
-const HELP_LAST_UPDATED = "September 3, 2026";
+const APP_VERSION = "1.0.3";
+const HELP_LAST_UPDATED = "September 4, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 
@@ -573,7 +573,7 @@ function isGridFullyValid(grid) {
 }
 
 // Fills in the solved grid, locks every guessed (non-given) cell, and
-// recolors its text brown -- leaving the cell's white background alone.
+// recolors its text blue -- leaving the cell's white background alone.
 function markSolved(grid) {
   applyGridToEntries(grid);
   for (let r = 0; r < 9; r++) {
@@ -591,7 +591,7 @@ function markSolved(grid) {
 // cell and drops back to the stylesheet's default guess color. Called
 // before Reset writes new values into the grid, so a puzzle that was
 // solved (manually or automatically) and then reset is actually editable
-// again, instead of staying locked and brown.
+// again, instead of staying locked and blue.
 function clearSolvedStyling() {
   for (const key in solvingCells) {
     if (!givenCells.has(key)) {

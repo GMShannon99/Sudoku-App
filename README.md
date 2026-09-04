@@ -37,14 +37,14 @@ The numbers to the right of each row and below each column show every digit stil
 
 ### Undo / Redo (Ctrl+Z / Ctrl+Shift+Z)
 
-On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — whether the digit was typed directly or filled in by clicking a candidate button — clearing that square and updating the row/column candidate labels. Repeated presses step back through your moves one at a time, most recent first. If a move is undone after the puzzle has auto-solved, the affected square becomes editable again instead of staying locked and brown. **Ctrl+Shift+Z** (or Cmd+Shift+Z) redoes the most recently undone move, putting its digit back. Making a new move after undoing clears anything left to redo. This history is separate from the Save/Reset backups above: starting a new puzzle or clicking Reset both clear it, since either one establishes a fresh starting point.
+On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — whether the digit was typed directly or filled in by clicking a candidate button — clearing that square and updating the row/column candidate labels. Repeated presses step back through your moves one at a time, most recent first. If a move is undone after the puzzle has auto-solved, the affected square becomes editable again instead of staying locked and blue. **Ctrl+Shift+Z** (or Cmd+Shift+Z) redoes the most recently undone move, putting its digit back. Making a new move after undoing clears anything left to redo. This history is separate from the Save/Reset backups above: starting a new puzzle or clicking Reset both clear it, since either one establishes a fresh starting point.
 
 ### Solving
 
 - **Solve** runs the app's solver (naked-singles propagation, then MRV backtracking) and fills in every remaining empty cell.
 - The puzzle also **auto-solves** the moment you fill in the last empty square yourself — no need to click Solve at all if you finish it by hand.
 - Once solved, an **"Iteration: N"** message appears in the corner, showing how many backtracking guesses the solver needed (0 means it solved purely through naked-singles logic, with no guessing required).
-- Every guessed (non-given) cell turns a brown color once the puzzle is solved, while keeping its white background — visually distinguishing your solved entries from the original clues.
+- Every guessed (non-given) cell turns a blue color once the puzzle is solved, while keeping its white background — visually distinguishing your solved entries from the original clues.
 
 ### Write to File
 
@@ -56,7 +56,7 @@ A **Help** button (available on both screens) opens an in-app documentation moda
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.2").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.3").
 
 ### Analytics
 
