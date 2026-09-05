@@ -62,9 +62,11 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 - **Total visits** — pulled live from GoatCounter's public counter endpoint, shown directly in the Help modal. If the request fails, times out, or GoatCounter's response isn't shaped as expected, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
 - **Visitor countries** — a country-by-country visitor breakdown, shown in its own pop-up titled "Sudoku Country Usage Stats by Gil Shannon," with a note underneath the heading that the figures are "Updated automatically once a week, or manually by the site admin." The data itself is read from a `stats-snapshot.json` file in the repo root, generated automatically by the **"Update Puzzle Stats"** GitHub Actions workflow (`.github/workflows/update-stats.yml`), which runs on a schedule (8:00 AM UTC every Monday) and can also be triggered manually from the repo's **Actions** tab via "Run workflow." The workflow calls GoatCounter's `/api/v0/stats/locations` API (see `scripts/fetch_goatcounter_stats.py`) and commits the updated snapshot straight to `main`. **This workflow requires a `GOATCOUNTER_TOKEN` repo secret** (a GoatCounter API token) to be set under Settings → Secrets and variables → Actions before it can run successfully. If `stats-snapshot.json` is missing, unreachable, or malformed, the pop-up shows "Stats unavailable" — this fetch is entirely independent of the total-visits one above, so one failing never affects the other. The pop-up closes the same way the Help modal does: its own Close button, clicking outside it, or pressing Escape.
 
+**Fun extra:** clicking "View Puzzle Stats" also shatters the button itself into a handful of jagged pieces that tumble off the bottom of the screen before the country-stats pop-up appears — purely cosmetic, skipped automatically if the browser's reduced-motion setting is on, and the button always comes back intact the next time it's needed.
+
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.8").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.10").
 
 ### Analytics
 

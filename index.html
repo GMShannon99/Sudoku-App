@@ -460,6 +460,31 @@
      this popup. */
   #countryStatsOverlay { z-index: 11; }
 
+  /* Clones of statsBtn created by shatterStatsButton() in sudoku-ui.js --
+     each one clip-path'd down to a single jagged slice of the button and
+     fixed-positioned exactly over its real on-screen spot, then animated
+     falling off the bottom of the screen. z-index is higher than both
+     overlays above so the falling pieces stay visible even after the
+     country-stats popup has opened underneath them. Skipped entirely
+     under prefers-reduced-motion (checked in JS -- no shard is ever
+     created in that case, so none of this ever applies). */
+  .stats-shard {
+    position: fixed;
+    margin: 0;
+    pointer-events: none;
+    z-index: 20;
+    animation-name: statsShatterFall;
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes statsShatterFall {
+    to {
+      transform: translate(var(--shard-dx), var(--shard-dy)) rotate(var(--shard-rot));
+      opacity: 0;
+    }
+  }
+
   @media (max-width: 520px) {
     .grid {
       grid-template-columns: repeat(9, 28px) 150px;
