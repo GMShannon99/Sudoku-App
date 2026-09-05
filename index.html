@@ -433,11 +433,13 @@
 
   /* Populated only after clicking "View Puzzle Stats" (see statsBtn's
      handler in sudoku-ui.js) -- hidden the rest of the time, and re-hidden
-     every time the Help modal opens, so this is the only place stats are
-     ever shown and only ever as a direct result of that click. #statsResult
-     (pageview total) and #countryStatsResult (country breakdown) are two
-     independent blocks fed by two independent fetches -- one failing has no
-     effect on the other. */
+     every time its containing modal opens, so this is the only place stats
+     are ever shown and only ever as a direct result of that click.
+     #statsResult (pageview total) lives in the Help modal itself;
+     #countryStatsResult (country breakdown) lives in the separate
+     #countryStatsOverlay popup that button also opens. Two independent
+     blocks fed by two independent fetches -- one failing has no effect on
+     the other. */
   .stats-result {
     padding: 8px 22px 14px;
     font-size: 0.8rem;
@@ -448,12 +450,15 @@
   .stats-result.error { color: var(--accent); }
   .stats-result .stats-note { display: block; margin-top: 2px; font-size: 0.75rem; }
 
-  /* Glue the two stats blocks together when both are visible, instead of
-     stacking two separate divider lines. */
-  .stats-result + .stats-result { border-top: none; padding-top: 0; }
-
   .stats-result ul { margin: 6px 0 0; padding-left: 18px; }
   .stats-result li { margin-bottom: 3px; }
+
+  /* #countryStatsOverlay reuses .modal-overlay/.modal exactly like
+     #helpOverlay, but sits above it (higher z-index, independent of DOM
+     order) since it's meant to stack on top of the Help modal rather than
+     replace it -- "View Puzzle Stats" leaves the Help modal open behind
+     this popup. */
+  #countryStatsOverlay { z-index: 11; }
 
   @media (max-width: 520px) {
     .grid {
@@ -700,17 +705,38 @@
 
         <h3>Puzzle stats</h3>
         <p>The &ldquo;View Puzzle Stats&rdquo; button below shows the site's total visit
-        count, pulled live from the public GoatCounter counter for this site &mdash;
-        read-only, public data, no login involved. This button is the only place in
-        the app where that count is ever shown; it stays hidden otherwise. It also
-        shows a visitor country breakdown, which updates automatically once a week
-        via a scheduled GitHub Action rather than being maintained by hand.</p>
+        count right here, pulled live from the public GoatCounter counter for this
+        site &mdash; read-only, public data, no login involved. This button is the
+        only place in the app where that count is ever shown; it stays hidden
+        otherwise. The same click also opens a separate pop-up with a visitor
+        country breakdown, which updates automatically once a week via a scheduled
+        GitHub Action (or on demand if run manually) rather than being maintained
+        by hand.</p>
       </div>
       <div class="stats-result" id="statsResult" hidden></div>
-      <div class="stats-result" id="countryStatsResult" hidden></div>
       <div class="modal-footer">
         <button class="secondary" id="statsBtn">View Puzzle Stats</button>
         <button id="helpCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= COUNTRY STATS POPUP ================= -->
+  <!-- Opened by statsBtn alongside the Help modal (see sudoku-ui.js) --
+       stacks on top of #helpOverlay rather than replacing it, so the Help
+       modal stays open behind it. Reuses the same modal-overlay/modal
+       pattern/styling as #helpOverlay (dark board theme, close button,
+       click-outside-to-dismiss), just as a second, independent overlay. -->
+  <div class="modal-overlay" id="countryStatsOverlay">
+    <div class="modal">
+      <h2>Sudoku Country Usage Stats by Gil Shannon</h2>
+      <div class="modal-body">
+        <p class="help-meta">Updated automatically once a week, or manually by
+        the site admin.</p>
+      </div>
+      <div class="stats-result" id="countryStatsResult" hidden></div>
+      <div class="modal-footer">
+        <button id="countryStatsCloseBtn">Close</button>
       </div>
     </div>
   </div>

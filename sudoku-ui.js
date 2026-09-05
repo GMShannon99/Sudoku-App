@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.7";
-const HELP_LAST_UPDATED = "September 4, 2026";
+const APP_VERSION = "1.0.8";
+const HELP_LAST_UPDATED = "September 5, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 
@@ -785,6 +785,7 @@ function redoLastMove() {
 
 const helpOverlayEl = document.getElementById("helpOverlay");
 const statsResultEl = document.getElementById("statsResult");
+const countryStatsOverlayEl = document.getElementById("countryStatsOverlay");
 const countryStatsResultEl = document.getElementById("countryStatsResult");
 
 // GoatCounter's public "visitor counter" endpoint -- a read-only, no-login
@@ -810,7 +811,7 @@ function resetStatsResult() {
 }
 
 // Same idea as resetStatsResult() above, but for the separate country-
-// breakdown block -- see showCountryStats() for why this is a wholly
+// breakdown popup -- see showCountryStats() for why this is a wholly
 // independent element/function pair rather than sharing statsResultEl.
 function resetCountryStatsResult() {
   countryStatsResultEl.hidden = true;
@@ -867,9 +868,10 @@ const STATS_SNAPSHOT_URL = "stats-snapshot.json";
 const STATS_SNAPSHOT_FETCH_TIMEOUT_MS = 6000;
 
 // Fetches the pre-generated country-visit breakdown and renders it into
-// countryStatsResultEl -- or "Stats unavailable" if the file is missing,
-// the request fails/times out, or its JSON isn't shaped as expected. Kept
-// entirely separate from showPuzzleStats() above -- its own element, own
+// countryStatsResultEl (inside the country-stats popup, not the Help
+// modal) -- or "Stats unavailable" if the file is missing, the request
+// fails/times out, or its JSON isn't shaped as expected. Kept entirely
+// separate from showPuzzleStats() above -- its own element, own
 // AbortController, own try/catch -- so a GoatCounter counter-endpoint
 // hiccup and a missing/broken stats-snapshot.json can never affect each
 // other; each shows its own result (or its own failure) independently.
@@ -920,12 +922,25 @@ function showHelp() {
   document.getElementById("helpVersionLine").textContent =
     `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
   resetStatsResult();
-  resetCountryStatsResult();
   helpOverlayEl.classList.add("active");
 }
 
 function hideHelp() {
   helpOverlayEl.classList.remove("active");
+}
+
+// Opens the country-stats popup layered on top of the Help modal (both
+// stay active at once -- closing this popup leaves the Help modal open
+// behind it) and kicks off its fetch. See showCountryStats() for the fetch
+// itself; this just owns the popup's own show/hide state.
+function showCountryStatsPopup() {
+  resetCountryStatsResult();
+  countryStatsOverlayEl.classList.add("active");
+  showCountryStats();
+}
+
+function hideCountryStatsPopup() {
+  countryStatsOverlayEl.classList.remove("active");
 }
 
 document.getElementById("entryHelpBtn").addEventListener("click", () => {
@@ -938,13 +953,19 @@ document.getElementById("solvingHelpBtn").addEventListener("click", () => {
 });
 document.getElementById("statsBtn").addEventListener("click", () => {
   // Two independent fetches, not one awaiting the other -- see
-  // showCountryStats()'s comment for why they must stay decoupled.
+  // showCountryStats()'s comment for why they must stay decoupled. One
+  // renders into the Help modal itself (showPuzzleStats), the other opens
+  // a separate popup on top of it (showCountryStatsPopup).
   showPuzzleStats();
-  showCountryStats();
+  showCountryStatsPopup();
 });
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
+});
+document.getElementById("countryStatsCloseBtn").addEventListener("click", hideCountryStatsPopup);
+countryStatsOverlayEl.addEventListener("click", (event) => {
+  if (event.target === countryStatsOverlayEl) hideCountryStatsPopup();
 });
 document.addEventListener("keydown", (event) => {
   // Any key press clears the candidate display -- other than pressing a
@@ -956,7 +977,10 @@ document.addEventListener("keydown", (event) => {
   // presses (see clearSolvedHighlight()).
   if (selectedCell !== null) clearSelection();
 
-  if (event.key === "Escape") hideHelp();
+  if (event.key === "Escape") {
+    hideCountryStatsPopup();
+    hideHelp();
+  }
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
     if (document.getElementById("solvingScreen").classList.contains("active")) {
