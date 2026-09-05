@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.11";
+const APP_VERSION = "1.2.0";
 const HELP_LAST_UPDATED = "September 5, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -76,6 +76,63 @@ function beep() {
     osc.connect(gain).connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {
+  }
+}
+
+// Synthesized "glass breaking" crash, same no-dependencies/no-asset
+// approach as beep() above (Web Audio API only), just layering more than
+// one sound source so it reads as a crash rather than another single tone:
+// a short burst of filtered white noise for the low "crash," plus a
+// handful of brief, randomly pitched/timed high tones on top for the
+// higher "tinkle" of individual shards. Played by shatterButton() itself,
+// so it automatically only ever fires when the visual shatter does too
+// (shatterButton() is only ever called from the non-reduced-motion branch
+// at each call site -- see shatterButton() below).
+function shatterSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Duration doubled (was 0.25s) and gain peaks raised (noise was 0.2,
+    // tones were 0.08) so the crash reads as clearly audible and lasts
+    // noticeably longer -- noise gets the bigger boost since it's a single
+    // sound source (less risk of several overlapping sources summing past
+    // 1.0 and clipping), while the many per-tone gains are raised more
+    // conservatively since up to 7 of them can overlap at once.
+    const noiseDuration = 0.5;
+    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * noiseDuration), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "highpass";
+    noiseFilter.frequency.value = 2000;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.5, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + noiseDuration);
+    noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
+    noise.start();
+    noise.stop(ctx.currentTime + noiseDuration);
+
+    const shardTones = randomInt(5, 7);
+    for (let i = 0; i < shardTones; i++) {
+      const startTime = ctx.currentTime + Math.random() * 0.16;
+      const duration = 0.1 + Math.random() * 0.16;
+
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = 2500 + Math.random() * 3000;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.14, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
   } catch (e) {
   }
 }
@@ -338,8 +395,15 @@ function buildShatterBoundaries(shardCount) {
 // shard gets an explicit solid background (the app's normal
 // *primary*-button fill) purely for this effect, so every piece reads as a
 // solid chunk breaking off, rather than relying on the real button's
-// styling (which may or may not have a visible fill of its own).
+// styling (which may or may not have a visible fill of its own). Also
+// plays the synthesized shatterSound() crash (see above) at the same
+// moment -- every call site only ever reaches this function from its own
+// non-reduced-motion branch, so the sound automatically shares the same
+// prefers-reduced-motion gating as the visual effect with no separate check
+// needed here.
 function shatterButton(btnEl) {
+  shatterSound();
+
   const rect = btnEl.getBoundingClientRect();
   const shardCount = randomInt(5, 8);
   const { top, bottom } = buildShatterBoundaries(shardCount);

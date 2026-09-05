@@ -709,10 +709,11 @@
           filled in flashes yellow and stays that way &mdash; clicking around or pressing
           keys won't clear it &mdash; until the puzzle actually changes, via Reset, Undo,
           or New/Clear. The Solve button itself also breaks apart and disappears on a
-          successful solve, leaving its spot empty until the puzzle is no longer
-          solved (Reset, an Undo that reopens the puzzle, or starting a new one) &mdash;
-          purely cosmetic, and skipped if your browser's reduced-motion setting is
-          on.</li>
+          successful solve, with a synthesized glass-breaking sound, leaving its spot
+          empty until the puzzle is no longer solved (Reset, an Undo that reopens the
+          puzzle, or starting a new one) &mdash; purely cosmetic, and both the
+          animation and its sound are skipped if your browser's reduced-motion
+          setting is on.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>
@@ -738,10 +739,12 @@
         count right here, pulled live from the public GoatCounter counter for this
         site &mdash; read-only, public data, no login involved. This button is the
         only place in the app where that count is ever shown; it stays hidden
-        otherwise. The same click also opens a separate pop-up with a visitor
-        country breakdown, which updates automatically once a week via a scheduled
-        GitHub Action (or on demand if run manually) rather than being maintained
-        by hand.</p>
+        otherwise. Clicking it also breaks the button itself apart with a
+        synthesized glass-breaking sound (both the animation and the sound are
+        skipped under reduced motion), before a separate pop-up opens with a
+        visitor country breakdown, which updates automatically once a week via a
+        scheduled GitHub Action (or on demand if run manually) rather than being
+        maintained by hand.</p>
       </div>
       <div class="stats-result" id="statsResult" hidden></div>
       <div class="modal-footer">
