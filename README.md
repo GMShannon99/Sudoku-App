@@ -57,11 +57,14 @@ A **Help** button (available on both screens) opens an in-app documentation moda
 
 ### Puzzle stats
 
-A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. Clicking it fetches the site's total visit count from GoatCounter's public counter endpoint and shows it right there in the modal — read-only, public data, with no login involved. This button is the **only** place in the app where that count is ever shown; it's never displayed inline elsewhere on the page, and nothing is fetched until it's clicked. If the request fails, times out, or GoatCounter's response isn't shaped as expected, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
+A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. Clicking it fetches two independent pieces of data and shows them right there in the modal — read-only, public data, with no login involved. This button is the **only** place in the app where either is ever shown; neither is displayed inline elsewhere on the page, and nothing is fetched until it's clicked.
+
+- **Total visits** — pulled live from GoatCounter's public counter endpoint. If the request fails, times out, or GoatCounter's response isn't shaped as expected, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
+- **Visitor countries** — a country-by-country visitor breakdown, read from a `stats-snapshot.json` file in the repo root. That file is generated automatically by the **"Update Puzzle Stats"** GitHub Actions workflow (`.github/workflows/update-stats.yml`), which runs on a schedule (8:00 AM UTC every Monday) and can also be triggered manually from the repo's **Actions** tab via "Run workflow." The workflow calls GoatCounter's `/api/v0/stats/locations` API (see `scripts/fetch_goatcounter_stats.py`) and commits the updated snapshot straight to `main`. **This workflow requires a `GOATCOUNTER_TOKEN` repo secret** (a GoatCounter API token) to be set under Settings → Secrets and variables → Actions before it can run successfully. If `stats-snapshot.json` is missing, unreachable, or malformed, the modal shows "Stats unavailable" — this fetch is entirely independent of the total-visits one above, so one failing never affects the other.
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.6").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.7").
 
 ### Analytics
 

@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.6";
+const APP_VERSION = "1.0.7";
 const HELP_LAST_UPDATED = "September 4, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -785,6 +785,7 @@ function redoLastMove() {
 
 const helpOverlayEl = document.getElementById("helpOverlay");
 const statsResultEl = document.getElementById("statsResult");
+const countryStatsResultEl = document.getElementById("countryStatsResult");
 
 // GoatCounter's public "visitor counter" endpoint -- a read-only, no-login
 // JSON/image/HTML endpoint meant for embedding on third-party pages (see
@@ -806,6 +807,15 @@ function resetStatsResult() {
   statsResultEl.hidden = true;
   statsResultEl.classList.remove("error");
   statsResultEl.textContent = "";
+}
+
+// Same idea as resetStatsResult() above, but for the separate country-
+// breakdown block -- see showCountryStats() for why this is a wholly
+// independent element/function pair rather than sharing statsResultEl.
+function resetCountryStatsResult() {
+  countryStatsResultEl.hidden = true;
+  countryStatsResultEl.classList.remove("error");
+  countryStatsResultEl.textContent = "";
 }
 
 // Fetches the site's total visit count from GoatCounter's public counter
@@ -847,10 +857,70 @@ async function showPuzzleStats() {
   }
 }
 
+// Relative path, since stats-snapshot.json is written to the repo root by
+// the "Update Puzzle Stats" GitHub Action (see .github/workflows/
+// update-stats.yml and scripts/fetch_goatcounter_stats.py) and served
+// alongside index.html from the same origin -- no GoatCounter API token
+// belongs in this front-end code, only that workflow's Actions secret has
+// one.
+const STATS_SNAPSHOT_URL = "stats-snapshot.json";
+const STATS_SNAPSHOT_FETCH_TIMEOUT_MS = 6000;
+
+// Fetches the pre-generated country-visit breakdown and renders it into
+// countryStatsResultEl -- or "Stats unavailable" if the file is missing,
+// the request fails/times out, or its JSON isn't shaped as expected. Kept
+// entirely separate from showPuzzleStats() above -- its own element, own
+// AbortController, own try/catch -- so a GoatCounter counter-endpoint
+// hiccup and a missing/broken stats-snapshot.json can never affect each
+// other; each shows its own result (or its own failure) independently.
+async function showCountryStats() {
+  countryStatsResultEl.hidden = false;
+  countryStatsResultEl.classList.remove("error");
+  countryStatsResultEl.textContent = "Loading country breakdown…";
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STATS_SNAPSHOT_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(STATS_SNAPSHOT_URL, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
+
+    const data = await response.json();
+    if (
+      typeof data.updated !== "string" ||
+      !Array.isArray(data.countries) ||
+      !data.countries.every(
+        (c) => c && typeof c.country === "string" && typeof c.count === "number"
+      )
+    ) {
+      throw new Error("Unexpected shape in stats-snapshot.json.");
+    }
+
+    countryStatsResultEl.textContent = "";
+    const heading = document.createElement("div");
+    heading.textContent = `Visitor countries (updated ${data.updated}):`;
+    countryStatsResultEl.append(heading);
+
+    const list = document.createElement("ul");
+    for (const { country, count } of data.countries) {
+      const li = document.createElement("li");
+      li.textContent = `${country} — ${count}`;
+      list.append(li);
+    }
+    countryStatsResultEl.append(list);
+  } catch (e) {
+    countryStatsResultEl.classList.add("error");
+    countryStatsResultEl.textContent = "Stats unavailable";
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function showHelp() {
   document.getElementById("helpVersionLine").textContent =
     `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
   resetStatsResult();
+  resetCountryStatsResult();
   helpOverlayEl.classList.add("active");
 }
 
@@ -866,7 +936,12 @@ document.getElementById("solvingHelpBtn").addEventListener("click", () => {
   clearIterationCount();
   showHelp();
 });
-document.getElementById("statsBtn").addEventListener("click", showPuzzleStats);
+document.getElementById("statsBtn").addEventListener("click", () => {
+  // Two independent fetches, not one awaiting the other -- see
+  // showCountryStats()'s comment for why they must stay decoupled.
+  showPuzzleStats();
+  showCountryStats();
+});
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
