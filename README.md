@@ -15,7 +15,7 @@ When the app loads, you land on a blank entry grid where you can:
 - **Type a custom puzzle** — enter the starting clues by hand, then click **Start Solving** to lock them in as givens (at least 6 filled squares are required).
 - **Use Sample Puzzle** — jump straight to a built-in "world's hardest sudoku"-style puzzle (only 21 givens), ignoring anything you've typed.
 - **Paste Puzzle** — load a puzzle record from the system clipboard: a single line of 81 grid digits (0–9, row by row, 0 for blank), optionally followed by one extra character. This is the same record format written by the desktop Sudoku Solver's "Save to File" feature. Invalid clipboard contents or an unsolvable puzzle both show a clear error message instead of loading.
-- **Create New** — clears the entry grid so you can start typing a fresh puzzle.
+- **Manual Entry** — clears the entry grid so you can start typing a fresh puzzle.
 - **Generate Puzzle** — pick a difficulty (**Easy**, **Moderate**, or **Hard**) and generate a brand-new, randomly created puzzle guaranteed to have exactly one solution. If no difficulty is selected, it defaults to Moderate. A "Generating puzzle…" message appears while it works, since finding the right difficulty can take a few attempts internally.
 
 ### Input validation everywhere
@@ -46,6 +46,7 @@ On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — wh
 - Once solved, an **"Iteration: N"** message appears in the corner, showing how many backtracking guesses the solver needed (0 means it solved purely through naked-singles logic, with no guessing required).
 - Every guessed (non-given) cell turns a blue color once the puzzle is solved, while keeping its white background — visually distinguishing your solved entries from the original clues.
 - On top of that, every guessed cell also flashes a yellow success background the instant the puzzle is solved — via Solve or auto-solve alike — which stays lit for as long as the grid remains completely and correctly solved. Clicking around or pressing keys doesn't clear it; only Reset, Undo, or New/Clear (i.e. the puzzle actually changing) does. Redoing back to a complete, correct grid brings the yellow back.
+- The Solve button itself shatters into pieces and falls away the instant the puzzle is solved — via Solve or auto-solve alike, reusing the same shatter effect as the Help modal's "View Puzzle Stats" button — leaving its spot on the screen empty (not just hidden with the layout collapsing around it) for as long as the puzzle stays solved. It reappears intact the moment the puzzle stops being solved (Reset, an Undo that breaks the completed grid, or starting a new puzzle). Skipped under reduced-motion, same as the stats button's shatter.
 
 ### Write to File
 
@@ -66,7 +67,7 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.10").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.0.11").
 
 ### Analytics
 

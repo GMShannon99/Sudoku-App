@@ -460,25 +460,26 @@
      this popup. */
   #countryStatsOverlay { z-index: 11; }
 
-  /* Clones of statsBtn created by shatterStatsButton() in sudoku-ui.js --
-     each one clip-path'd down to a single jagged slice of the button and
-     fixed-positioned exactly over its real on-screen spot, then animated
-     falling off the bottom of the screen. z-index is higher than both
-     overlays above so the falling pieces stay visible even after the
-     country-stats popup has opened underneath them. Skipped entirely
-     under prefers-reduced-motion (checked in JS -- no shard is ever
-     created in that case, so none of this ever applies). */
-  .stats-shard {
+  /* Clones of a button created by shatterButton() in sudoku-ui.js (used by
+     both the "View Puzzle Stats" and Solve buttons) -- each one clip-path'd
+     down to a single jagged slice of the button and fixed-positioned
+     exactly over its real on-screen spot, then animated falling off the
+     bottom of the screen. z-index is higher than both Help-related overlays
+     above so falling pieces stay visible even after the country-stats
+     popup has opened underneath them. Skipped entirely under
+     prefers-reduced-motion (checked in JS -- no shard is ever created in
+     that case, so none of this ever applies). */
+  .shatter-shard {
     position: fixed;
     margin: 0;
     pointer-events: none;
     z-index: 20;
-    animation-name: statsShatterFall;
+    animation-name: shatterFall;
     animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
     animation-fill-mode: forwards;
   }
 
-  @keyframes statsShatterFall {
+  @keyframes shatterFall {
     to {
       transform: translate(var(--shard-dx), var(--shard-dy)) rotate(var(--shard-rot));
       opacity: 0;
@@ -554,7 +555,7 @@
         </div>
         <div class="entry-secondary-actions">
           <button class="secondary" id="pasteBtn">Paste Puzzle</button>
-          <button class="secondary" id="createNewBtn">Create New</button>
+          <button class="secondary" id="createNewBtn">Manual Entry</button>
           <button class="secondary" id="generateBtn">Generate Puzzle</button>
           <div class="difficulty-picker">
             <span class="difficulty-label">Generate difficulty:</span>
@@ -636,7 +637,7 @@
         <h2>Sudoku Web Functionality</h2>
         <h3>Starting from a blank grid</h3>
         <p>When the grid is blank &mdash; either the first time the page loads, or right
-        after clicking &ldquo;Create New&rdquo; or &ldquo;New/Clear&rdquo; &mdash; you're on the puzzle
+        after clicking &ldquo;Manual Entry&rdquo; or &ldquo;New/Clear&rdquo; &mdash; you're on the puzzle
         entry screen. Type a digit into every square you want as a starting clue and
         leave every other square blank (no need to type 0 anywhere). Every digit you
         type is checked against that cell's row, column, and 3x3 box &mdash; a digit
@@ -651,7 +652,7 @@
           clipboard &mdash; see &ldquo;Pasting a saved puzzle&rdquo; below, or</li>
           <li>Pick a difficulty (Easy, Moderate, or Hard) and click &ldquo;Generate
           Puzzle&rdquo; to create a brand new puzzle instead of typing or pasting one, or</li>
-          <li>Click &ldquo;Create New&rdquo; to clear every square on this entry screen and
+          <li>Click &ldquo;Manual Entry&rdquo; to clear every square on this entry screen and
           start manually typing a brand new puzzle.</li>
         </ul>
 
@@ -707,7 +708,11 @@
           you fill in the last empty square yourself. Either way, every square you
           filled in flashes yellow and stays that way &mdash; clicking around or pressing
           keys won't clear it &mdash; until the puzzle actually changes, via Reset, Undo,
-          or New/Clear.</li>
+          or New/Clear. The Solve button itself also breaks apart and disappears on a
+          successful solve, leaving its spot empty until the puzzle is no longer
+          solved (Reset, an Undo that reopens the puzzle, or starting a new one) &mdash;
+          purely cosmetic, and skipped if your browser's reduced-motion setting is
+          on.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>

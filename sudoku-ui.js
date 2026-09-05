@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.0.10";
+const APP_VERSION = "1.0.11";
 const HELP_LAST_UPDATED = "September 5, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -279,11 +279,122 @@ document.getElementById("pasteBtn").addEventListener("click", async () => {
   launchSolvingScreen(grid, iterations);
 });
 
+/* ===================== BUTTON SHATTER EFFECT ===================== */
+// Purely cosmetic "shatter" effect, reusable for any button: clones it into
+// 5-8 jagged pieces and animates them falling off the bottom of the screen.
+// Used by the Help modal's "View Puzzle Stats" button (see showHelp() etc.
+// below) and the solving screen's Solve button on a successful solve (see
+// showSolvedHighlight()/clearSolvedHighlight()) -- both call the same
+// shatterButton()/resetButtonShatter() pair rather than each having their
+// own copy. Each shard is tagged with which button it came from
+// (data-shatter-owner), so if both buttons happened to shatter around the
+// same time, resetting one's shards/visibility never touches the other's.
+
+// Checked once, not per-click/per-button, since a user's OS-level motion
+// preference doesn't change mid-session. window.matchMedia is absent in
+// the jsdom environment the test suite runs under (real browsers all have
+// it) -- falls back to "no reduced-motion preference" there.
+const prefersReducedMotion = window.matchMedia
+  ? window.matchMedia("(prefers-reduced-motion: reduce)")
+  : { matches: false };
+
+function randomInt(min, max) {
+  return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+// Builds shardCount+1 boundary points (0-100, in percent of the button's
+// width) for both the top and bottom edge of the cut lines between shards.
+// The two outer boundaries (0 and 100) are left exactly on the button's
+// real left/right edges -- unjittered -- so the first and last shard keep
+// the button's actual rounded corners. Every interior boundary is jittered
+// independently for top vs. bottom, which is what turns a straight vertical
+// cut into a jagged diagonal one.
+function buildShatterBoundaries(shardCount) {
+  const step = 100 / shardCount;
+  const base = Array.from({ length: shardCount + 1 }, (_, i) => i * step);
+  const jitter = (points) =>
+    points.map((v, i) => {
+      if (i === 0 || i === points.length - 1) return v;
+      return v + (Math.random() - 0.5) * step * 0.6;
+    });
+  return { top: jitter(base), bottom: jitter(base) };
+}
+
+// Clones btnEl into 5-8 jagged vertical shards, each clip-path'd down to
+// one slice of the real clone, fixed-positioned exactly over btnEl's
+// current on-screen spot, then animated falling off the bottom of the
+// screen with a random rotation and horizontal drift each. Every shard
+// removes itself from the DOM the instant its own animation ends, so
+// nothing lingers. btnEl itself is hidden (not removed -- see
+// resetButtonShatter()) the instant this runs.
+//
+// Buttons in this app can have a transparent `.secondary` background, with
+// only a 1px border around the true outer edge and text as their visible
+// content. A clip-path slice through a button's interior crops away that
+// border entirely, leaving a shard with nothing visible but empty
+// transparent space (at most a sliver of text) -- which is why the very
+// first version of this effect ran perfectly (every shard really was
+// created, positioned, and animated) but was completely invisible. Each
+// shard gets an explicit solid background (the app's normal
+// *primary*-button fill) purely for this effect, so every piece reads as a
+// solid chunk breaking off, rather than relying on the real button's
+// styling (which may or may not have a visible fill of its own).
+function shatterButton(btnEl) {
+  const rect = btnEl.getBoundingClientRect();
+  const shardCount = randomInt(5, 8);
+  const { top, bottom } = buildShatterBoundaries(shardCount);
+
+  btnEl.style.visibility = "hidden";
+
+  for (let i = 0; i < shardCount; i++) {
+    const shard = btnEl.cloneNode(true);
+    shard.removeAttribute("id");
+    shard.tabIndex = -1;
+    shard.classList.add("shatter-shard");
+    shard.dataset.shatterOwner = btnEl.id;
+    // cloneNode(true) copies btnEl's whole style attribute, including the
+    // visibility:hidden just set above -- reset it explicitly (not just to
+    // "", which only happens to work because no stylesheet rule sets
+    // visibility on buttons) so every shard is visible regardless of
+    // ordering relative to when the real button gets hidden.
+    shard.style.visibility = "visible";
+    shard.style.left = `${rect.left}px`;
+    shard.style.top = `${rect.top}px`;
+    shard.style.width = `${rect.width}px`;
+    shard.style.height = `${rect.height}px`;
+    shard.style.background = "var(--ink)";
+    shard.style.clipPath =
+      `polygon(${top[i]}% 0%, ${top[i + 1]}% 0%, ${bottom[i + 1]}% 100%, ${bottom[i]}% 100%)`;
+    shard.style.setProperty("--shard-dx", `${randomInt(-50, 50)}px`);
+    shard.style.setProperty("--shard-dy", `${Math.round(window.innerHeight - rect.top + 120)}px`);
+    shard.style.setProperty("--shard-rot", `${randomInt(-140, 140)}deg`);
+    shard.style.animationDuration = `${randomInt(500, 850)}ms`;
+    shard.style.animationDelay = `${randomInt(0, 60)}ms`;
+    shard.addEventListener("animationend", () => shard.remove());
+    document.body.append(shard);
+  }
+}
+
+// Belt-and-braces reset for one specific button's shatter: removes only
+// that button's own shard clones still in the DOM, identified via
+// data-shatter-owner (each shard normally self-removes on animationend, so
+// this is only a backstop), and restores that button's own visibility --
+// independent of any other button that might be mid-shatter at the same
+// time. Run every time a button needs to be guaranteed intact and
+// clickable again.
+function resetButtonShatter(btnEl) {
+  document
+    .querySelectorAll(`.shatter-shard[data-shatter-owner="${btnEl.id}"]`)
+    .forEach((shard) => shard.remove());
+  btnEl.style.visibility = "";
+}
+
 /* ===================== SOLVING SCREEN ===================== */
 
 const solvingGridEl = document.getElementById("solvingGrid");
 const difficultyLineEl = document.getElementById("difficultyLine");
 const iterationLineEl = document.getElementById("iterationLine");
+const solveBtnEl = document.getElementById("solveBtn");
 let solvingCells = null;
 let rowMissingLabels = [];
 let colMissingLabels = [];
@@ -615,6 +726,12 @@ let solvedHighlightActive = false;
 // text). Left as its own function/class -- separate from .selected --
 // so this success flash and the click-to-select highlight never fight
 // over the same class or state.
+//
+// Also the single trigger point for shattering the Solve button (see
+// shatterButton() and the BUTTON SHATTER EFFECT section) -- solvedHighlightActive
+// is this app's existing "is the grid currently solved and untouched"
+// source of truth, so Solve reuses it rather than tracking its own
+// separate solved/not-solved state.
 function showSolvedHighlight() {
   for (const key in solvingCells) {
     if (!givenCells.has(key)) {
@@ -622,6 +739,14 @@ function showSolvedHighlight() {
     }
   }
   solvedHighlightActive = true;
+  if (prefersReducedMotion.matches) {
+    // The blank space Solve leaves behind is a real state change, not just
+    // a cosmetic flourish -- still applies under reduced motion, just
+    // without the falling-shards animation.
+    solveBtnEl.style.visibility = "hidden";
+  } else {
+    shatterButton(solveBtnEl);
+  }
 }
 
 // Removes the yellow success flash -- and only that -- leaving disabled
@@ -631,13 +756,15 @@ function showSolvedHighlight() {
 // goToEntryScreen(), i.e. exactly when the grid stops being a completed,
 // solved puzzle. Never called from generic click/keypress listeners --
 // the yellow should outlive any amount of clicking or key-pressing as long
-// as the solved grid on screen hasn't actually changed.
+// as the solved grid on screen hasn't actually changed. Also restores the
+// Solve button (see showSolvedHighlight() above) for the same reason.
 function clearSolvedHighlight() {
   if (!solvedHighlightActive) return;
   for (const key in solvingCells) {
     solvingCells[key].classList.remove("solved-highlight");
   }
   solvedHighlightActive = false;
+  resetButtonShatter(solveBtnEl);
 }
 
 // Shared by the Solve button and the auto-solve check below: validates the
@@ -789,106 +916,11 @@ const countryStatsOverlayEl = document.getElementById("countryStatsOverlay");
 const countryStatsResultEl = document.getElementById("countryStatsResult");
 const statsBtnEl = document.getElementById("statsBtn");
 
-// Purely cosmetic "shatter" effect on statsBtn -- see shatterStatsButton()
-// below. Checked once, not per-click, since a user's OS-level motion
-// preference doesn't change mid-session. window.matchMedia is absent in
-// the jsdom environment the test suite runs under (real browsers all have
-// it) -- falls back to "no reduced-motion preference" there.
-const prefersReducedMotion = window.matchMedia
-  ? window.matchMedia("(prefers-reduced-motion: reduce)")
-  : { matches: false };
-
-// How long the shatter plays before the country-stats popup opens
-// underneath the falling pieces -- just long enough to read as "the button
-// broke, and now here's the popup," not so long it delays the popup's own
-// (independent) fetch for no reason.
+// How long the shatter (see shatterButton() above) plays before the
+// country-stats popup opens underneath the falling pieces -- just long
+// enough to read as "the button broke, and now here's the popup," not so
+// long it delays the popup's own (independent) fetch for no reason.
 const STATS_SHATTER_POPUP_DELAY_MS = 350;
-
-function randomInt(min, max) {
-  return Math.floor(min + Math.random() * (max - min + 1));
-}
-
-// Builds shardCount+1 boundary points (0-100, in percent of the button's
-// width) for both the top and bottom edge of the cut lines between shards.
-// The two outer boundaries (0 and 100) are left exactly on the button's
-// real left/right edges -- unjittered -- so the first and last shard keep
-// the button's actual rounded corners. Every interior boundary is jittered
-// independently for top vs. bottom, which is what turns a straight vertical
-// cut into a jagged diagonal one.
-function buildShatterBoundaries(shardCount) {
-  const step = 100 / shardCount;
-  const base = Array.from({ length: shardCount + 1 }, (_, i) => i * step);
-  const jitter = (points) =>
-    points.map((v, i) => {
-      if (i === 0 || i === points.length - 1) return v;
-      return v + (Math.random() - 0.5) * step * 0.6;
-    });
-  return { top: jitter(base), bottom: jitter(base) };
-}
-
-// Clones statsBtn into 5-8 jagged vertical shards, each clip-path'd down to
-// one slice of the real clone, fixed-positioned exactly over the real
-// button's current on-screen spot, then animated falling off the bottom of
-// the screen with a random rotation and horizontal drift each. Every shard
-// removes itself from the DOM the instant its own animation ends, so
-// nothing lingers. The real button is hidden (not removed -- see
-// resetStatsButtonShatter()) the instant this runs.
-//
-// statsBtn is a `.secondary` button -- transparent background, with only a
-// 1px border around its true outer edge and text as its visible content
-// (see button.secondary in index.html). A clip-path slice through the
-// button's interior crops away that border entirely, leaving a shard with
-// nothing visible but empty transparent space (at most a sliver of text) --
-// which is why the very first version of this effect ran perfectly (every
-// shard really was created, positioned, and animated) but was completely
-// invisible. Each shard gets an explicit solid background (the app's normal
-// *primary*-button fill) purely for this effect, so every piece reads as a
-// solid chunk breaking off, rather than relying on the real button's mostly
-// see-through styling.
-function shatterStatsButton() {
-  const rect = statsBtnEl.getBoundingClientRect();
-  const shardCount = randomInt(5, 8);
-  const { top, bottom } = buildShatterBoundaries(shardCount);
-
-  statsBtnEl.style.visibility = "hidden";
-
-  for (let i = 0; i < shardCount; i++) {
-    const shard = statsBtnEl.cloneNode(true);
-    shard.removeAttribute("id");
-    shard.tabIndex = -1;
-    shard.classList.add("stats-shard");
-    // cloneNode(true) copies statsBtnEl's whole style attribute, including
-    // the visibility:hidden just set above -- reset it explicitly (not just
-    // to "", which only happens to work because no stylesheet rule sets
-    // visibility on buttons) so every shard is visible regardless of
-    // ordering relative to when the real button gets hidden.
-    shard.style.visibility = "visible";
-    shard.style.left = `${rect.left}px`;
-    shard.style.top = `${rect.top}px`;
-    shard.style.width = `${rect.width}px`;
-    shard.style.height = `${rect.height}px`;
-    shard.style.background = "var(--ink)";
-    shard.style.clipPath =
-      `polygon(${top[i]}% 0%, ${top[i + 1]}% 0%, ${bottom[i + 1]}% 100%, ${bottom[i]}% 100%)`;
-    shard.style.setProperty("--shard-dx", `${randomInt(-50, 50)}px`);
-    shard.style.setProperty("--shard-dy", `${Math.round(window.innerHeight - rect.top + 120)}px`);
-    shard.style.setProperty("--shard-rot", `${randomInt(-140, 140)}deg`);
-    shard.style.animationDuration = `${randomInt(500, 850)}ms`;
-    shard.style.animationDelay = `${randomInt(0, 60)}ms`;
-    shard.addEventListener("animationend", () => shard.remove());
-    document.body.append(shard);
-  }
-}
-
-// Belt-and-braces reset: removes any shard clones still in the DOM (each
-// normally self-removes on animationend, so this is only a backstop) and
-// restores the real button's visibility. Run every time the button needs
-// to be guaranteed intact and clickable again -- Help modal open, and
-// country-stats popup close -- so repeated shatters always start clean.
-function resetStatsButtonShatter() {
-  document.querySelectorAll(".stats-shard").forEach((shard) => shard.remove());
-  statsBtnEl.style.visibility = "";
-}
 
 // GoatCounter's public "visitor counter" endpoint -- a read-only, no-login
 // JSON/image/HTML endpoint meant for embedding on third-party pages (see
@@ -1024,7 +1056,7 @@ function showHelp() {
   document.getElementById("helpVersionLine").textContent =
     `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
   resetStatsResult();
-  resetStatsButtonShatter();
+  resetButtonShatter(statsBtnEl);
   helpOverlayEl.classList.add("active");
 }
 
@@ -1044,7 +1076,7 @@ function showCountryStatsPopup() {
 
 function hideCountryStatsPopup() {
   countryStatsOverlayEl.classList.remove("active");
-  resetStatsButtonShatter();
+  resetButtonShatter(statsBtnEl);
 }
 
 document.getElementById("entryHelpBtn").addEventListener("click", () => {
@@ -1069,7 +1101,7 @@ statsBtnEl.addEventListener("click", () => {
   if (prefersReducedMotion.matches) {
     showCountryStatsPopup();
   } else {
-    shatterStatsButton();
+    shatterButton(statsBtnEl);
     setTimeout(showCountryStatsPopup, STATS_SHATTER_POPUP_DELAY_MS);
   }
 });
