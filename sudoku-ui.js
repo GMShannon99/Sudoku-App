@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.2.3";
+const APP_VERSION = "1.2.4";
 const HELP_LAST_UPDATED = "September 6, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -918,6 +918,7 @@ document.getElementById("writeToFileBtn").addEventListener("click", () => {
 /* ===================== PRINT PUZZLE ===================== */
 
 const printInvalidOverlayEl = document.getElementById("printInvalidOverlay");
+const printImageEl = document.getElementById("printImage");
 
 function showPrintInvalidPopup() {
   printInvalidOverlayEl.classList.add("active");
@@ -925,6 +926,22 @@ function showPrintInvalidPopup() {
 
 function hidePrintInvalidPopup() {
   printInvalidOverlayEl.classList.remove("active");
+}
+
+// Shared by downloadJpgBtn and printBtn: returns the current grid if it has
+// a valid solution, or shows the "Cannot Print" popup and returns null if
+// not. Callers only ever handle the grid once they know it's real.
+function getPrintableGridOrShowInvalid() {
+  clearIterationCount();
+
+  const grid = readGrid(solvingCells);
+  const solvabilityCheck = grid.map((row) => row.slice());
+  const { solved } = SudokuLogic.solve(solvabilityCheck);
+  if (!(solved && isGridFullyValid(solvabilityCheck))) {
+    showPrintInvalidPopup();
+    return null;
+  }
+  return grid;
 }
 
 // Draws the current grid onto a fresh, never-attached-to-the-DOM <canvas>
@@ -1083,16 +1100,9 @@ function renderPrintCanvas(grid) {
   return canvas.toDataURL("image/jpeg", PRINT_JPEG_QUALITY);
 }
 
-document.getElementById("printBtn").addEventListener("click", () => {
-  clearIterationCount();
-
-  const grid = readGrid(solvingCells);
-  const solvabilityCheck = grid.map((row) => row.slice());
-  const { solved } = SudokuLogic.solve(solvabilityCheck);
-  if (!(solved && isGridFullyValid(solvabilityCheck))) {
-    showPrintInvalidPopup();
-    return;
-  }
+document.getElementById("downloadJpgBtn").addEventListener("click", () => {
+  const grid = getPrintableGridOrShowInvalid();
+  if (!grid) return;
 
   const dataUrl = renderPrintCanvas(grid);
   const link = document.createElement("a");
@@ -1103,6 +1113,45 @@ document.getElementById("printBtn").addEventListener("click", () => {
   document.body.removeChild(link);
 
   setStatus(`Downloaded ${PRINT_FILE_NAME}.`, "success");
+});
+
+// Prints directly instead of requiring the user to download a file and open
+// it separately (a particular hassle on iOS, where that means digging the
+// image out of the Files app before Share > Print is even reachable). Reuses
+// the same renderPrintCanvas() image as Download JPG, but points #printImage
+// at it and calls window.print() -- @media print (see index.html's <style>)
+// hides everything else on the page for the duration of the print dialog.
+//
+// Deliberately NOT window.open()-ing a separate print window/tab: besides
+// desktop popup blockers (which only allow window.open() as a *synchronous*
+// result of the click -- fine here since everything above is synchronous,
+// no awaited work in between), window.print() called on a window opened via
+// window.open() is known to be unreliable specifically on iOS Safari
+// (prints a blank page, or the print sheet never appears at all). Printing
+// the current document instead sidesteps that popup/child-window path
+// entirely, which is why it's the more cross-browser-reliable technique --
+// iOS Safari's Share Sheet "Print" (AirPrint) is then just its ordinary
+// handling of a print-triggered document, no special-casing needed.
+document.getElementById("printBtn").addEventListener("click", () => {
+  const grid = getPrintableGridOrShowInvalid();
+  if (!grid) return;
+
+  const dataUrl = renderPrintCanvas(grid);
+
+  // Setting .src to a value that's already loaded doesn't reliably re-fire
+  // "load" in every browser (e.g. printing the same puzzle twice in a row
+  // produces an identical data URL) -- so print immediately if the image is
+  // already showing this exact data, otherwise wait for it to finish
+  // decoding first.
+  if (printImageEl.src === dataUrl && printImageEl.complete && printImageEl.naturalWidth > 0) {
+    window.print();
+    return;
+  }
+  printImageEl.onload = () => {
+    printImageEl.onload = null;
+    window.print();
+  };
+  printImageEl.src = dataUrl;
 });
 
 document.getElementById("printInvalidCloseBtn").addEventListener("click", hidePrintInvalidPopup);

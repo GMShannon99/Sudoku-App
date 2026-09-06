@@ -61,7 +61,10 @@ The **Write to File** button exports the current grid (givens plus whatever you'
 
 ### Print Puzzle
 
-The **Print Puzzle** button downloads a printable JPG image (`Sudoku_Print.jpg`) of the current puzzle, sized for Letter-size (8.5×11in) portrait printing, so it can be worked on with pen or pencil. Before generating anything, it checks whether the current entries actually have a valid solution (reusing the same solver used everywhere else); if not, a popup explains that the puzzle has no valid solution and nothing is downloaded. The image includes a header (page title, difficulty, and today's date), the full 9×9 grid with thin cell borders and thicker 3×3 box borders, the given clues shaded with a light grey background (guesses stay on a plain background so the two are easy to tell apart on paper), the same row/column missing-digit numbers shown on screen, and — for every still-empty square — its remaining valid candidate digits laid out in a small 3×3 mini-grid inside the cell. Works the same way whether running from the browser or from the installed home-screen app.
+**Download JPG** and **Print** both generate the same printable image of the current puzzle, sized for Letter-size (8.5×11in) portrait printing, so it can be worked on with pen or pencil. Before generating anything, both check whether the current entries actually have a valid solution (reusing the same solver used everywhere else); if not, a popup explains that the puzzle has no valid solution and nothing is generated. The image includes a header (page title, difficulty, and today's date), the full 9×9 grid with thin cell borders and thicker 3×3 box borders, the given clues shaded with a light grey background (guesses stay on a plain background so the two are easy to tell apart on paper), the same row/column missing-digit numbers shown on screen, and — for every still-empty square — its remaining valid candidate digits laid out in a small 3×3 mini-grid inside the cell. Both work the same way whether running from the browser or from the installed home-screen app.
+
+- **Download JPG** saves the image as a file (`Sudoku_Print.jpg`) to your browser's default downloads location — for emailing, attaching elsewhere, or printing later from a computer.
+- **Print** opens your browser's native print dialog directly on that image, with no file to download or locate first. It works by revealing a hidden, print-only `<img>` (see `@media print` in `index.html`) and calling `window.print()` on the current page, rather than opening a separate print window — deliberately, since `window.print()` on a window opened via `window.open()` is unreliable on iOS Safari (it can print a blank page, or never surface the print sheet at all). On an iPhone, tapping **Print** brings up the same Share Sheet / AirPrint flow any other app's print button would — including from the installed home-screen app, which uses the same underlying print handling even without Safari's own browser chrome around it.
 
 ### Help
 
@@ -78,7 +81,7 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.3").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.4").
 
 ### Analytics
 

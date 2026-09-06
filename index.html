@@ -535,6 +535,24 @@
     .candidate-grid { grid-template-columns: repeat(3, 14px); grid-auto-rows: 14px; gap: 2px; }
     .candidate-btn { width: 14px; height: 14px; font-size: 0.55rem; }
   }
+
+  /* #printArea holds the Print Puzzle canvas image (see sudoku-ui.js's
+     printBtn handler) purely for window.print() to render -- invisible the
+     rest of the time. Kept in the normal document instead of a popup window
+     because window.print() called on a separate window opened via
+     window.open() is unreliable on iOS Safari (sometimes prints blank, or
+     never surfaces the dialog at all); printing the current document via
+     @media print is the cross-browser-reliable technique, and iOS Safari's
+     Share Sheet "Print" (AirPrint) is just its normal handling of a
+     print-triggered document, so this needs no special-casing there. */
+  #printArea { display: none; }
+  @media print {
+    html, body { background: #ffffff !important; }
+    body > *:not(#printArea) { display: none !important; }
+    #printArea { display: block !important; }
+    #printImage { width: 100%; height: auto; }
+  }
+  @page { margin: 0.3in; }
 </style>
 </head>
 <body>
@@ -585,7 +603,8 @@
     <div class="controls">
       <button id="saveBtn">Save</button>
       <button class="secondary" id="writeToFileBtn" title="Each save creates a new file in your browser's default downloads folder.">Write to File</button>
-      <button class="secondary" id="printBtn" title="Downloads a printable JPG image of the current puzzle.">Print Puzzle</button>
+      <button class="secondary" id="downloadJpgBtn" title="Downloads a printable JPG image of the current puzzle.">Download JPG</button>
+      <button class="secondary" id="printBtn" title="Opens your browser's print dialog with a printable image of the current puzzle.">Print</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
@@ -721,13 +740,18 @@
           puzzle, or starting a new one) &mdash; purely cosmetic, and both the
           animation and its sound are skipped if your browser's reduced-motion
           setting is on.</li>
-          <li><strong>Print Puzzle</strong> &mdash; Downloads a printable JPG image of the
-          puzzle exactly as it currently stands: given clues shaded with a light grey
-          background, your entries on a plain background, the same row/column missing-digit
-          numbers shown on screen, and every empty square's remaining valid candidates laid
-          out in a small grid so it can be worked on with pen or pencil. If the current
-          entries have no valid solution at all, a popup explains this instead and no image
-          is generated.</li>
+          <li><strong>Download JPG</strong> and <strong>Print</strong> &mdash; Both generate the
+          same printable image of the puzzle exactly as it currently stands: given clues
+          shaded with a light grey background, your entries on a plain background, the same
+          row/column missing-digit numbers shown on screen, and every empty square's
+          remaining valid candidates laid out in a small grid so it can be worked on with pen
+          or pencil. <strong>Download JPG</strong> saves it as a file, for emailing,
+          attaching, or printing later from a computer. <strong>Print</strong> instead opens
+          your browser's print dialog directly with that image &mdash; on a phone, this is
+          the same Share Sheet / print flow (e.g. AirPrint on iOS) any other app's print
+          button would open, with no file to find first. If the current entries have no
+          valid solution at all, either button shows a popup explaining this instead, and
+          nothing is generated.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>
@@ -768,10 +792,18 @@
     </div>
   </div>
 
+  <!-- ================= PRINT PUZZLE: PRINT PREVIEW IMAGE ================= -->
+  <!-- Populated by printBtn's handler (see sudoku-ui.js) with the same
+       canvas-generated JPG data URL downloadJpgBtn saves to a file, then
+       revealed via @media print (see <style> above) so window.print() has
+       something to print. Invisible on-screen at all other times. -->
+  <div id="printArea"><img id="printImage" alt="Printable Sudoku puzzle"></div>
+
   <!-- ================= PRINT PUZZLE: NO VALID SOLUTION POPUP ================= -->
-  <!-- Shown by printBtn's handler (see sudoku-ui.js) instead of generating an
-       image, whenever the current grid has no valid solution at all. Reuses
-       the same modal-overlay/modal pattern as #helpOverlay/#countryStatsOverlay. -->
+  <!-- Shown by downloadJpgBtn's/printBtn's handlers (see sudoku-ui.js) instead
+       of generating an image, whenever the current grid has no valid
+       solution at all. Reuses the same modal-overlay/modal pattern as
+       #helpOverlay/#countryStatsOverlay. -->
   <div class="modal-overlay" id="printInvalidOverlay">
     <div class="modal">
       <h2>Cannot Print</h2>
