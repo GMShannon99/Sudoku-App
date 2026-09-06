@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.2.1";
+const APP_VERSION = "1.2.2";
 const HELP_LAST_UPDATED = "September 6, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -1082,7 +1082,17 @@ async function showCountryStats() {
   const timeoutId = setTimeout(() => controller.abort(), STATS_SNAPSHOT_FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(STATS_SNAPSHOT_URL, { signal: controller.signal });
+    // cache: "no-store" bypasses the ordinary HTTP cache, not just the
+    // service worker's Cache Storage -- GitHub Pages serves this file with
+    // `Cache-Control: max-age=600`, and the service worker already lets this
+    // request go straight to the network (see sw.js's isNetworkOnly()), but
+    // without this option the browser's own HTTP cache could still hand back
+    // a response cached from up to 10 minutes ago instead of hitting the
+    // network at all.
+    const response = await fetch(STATS_SNAPSHOT_URL, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
     if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
 
     const data = await response.json();
@@ -1173,6 +1183,11 @@ document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
 });
+// Manual escape hatch: re-runs the same fetch showCountryStats() already
+// does on open (cache: "no-store", so it always hits the network) in case
+// stats ever look stale for any reason -- no need to close/reopen the popup
+// or the whole app to force a fresh read.
+document.getElementById("countryStatsRefreshBtn").addEventListener("click", showCountryStats);
 document.getElementById("countryStatsCloseBtn").addEventListener("click", hideCountryStatsPopup);
 countryStatsOverlayEl.addEventListener("click", (event) => {
   if (event.target === countryStatsOverlayEl) hideCountryStatsPopup();
