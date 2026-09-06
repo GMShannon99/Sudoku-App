@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.2.0";
-const HELP_LAST_UPDATED = "September 5, 2026";
+const APP_VERSION = "1.2.1";
+const HELP_LAST_UPDATED = "September 6, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 
@@ -1203,5 +1203,17 @@ document.addEventListener("keydown", (event) => {
     }
   }
 });
+
+// PWA install support -- registers sw.js so the app can be installed to a
+// phone's home screen and keep working offline. Feature-detected since
+// older browsers have no serviceWorker API at all. Only works over HTTPS or
+// localhost; a plain file:// open silently skips this (see README).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((e) => {
+      console.error("Service worker registration failed:", e);
+    });
+  });
+}
 
 initEntryScreen();

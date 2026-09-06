@@ -4,7 +4,14 @@ A browser-based Sudoku puzzle entry and solving tool. Type in your own puzzle, p
 
 ## Live demo
 
-**[https://GMShannon99.github.io/sudoku-web/](https://GMShannon99.github.io/sudoku-web/)**
+**[https://GMShannon99.github.io/Sudoku-App/](https://GMShannon99.github.io/Sudoku-App/)**
+
+## Install it on your phone
+
+This is a Progressive Web App (PWA) — it can be installed to a phone's home screen and launches in its own window (no browser address bar), and the already-visited pages keep working offline. This only works when the site is loaded over HTTPS (the GitHub Pages link above) or `localhost` — opening `index.html` straight off disk (`file://`) skips installability and offline support entirely.
+
+- **Android / Chrome** — open the live demo link, tap the browser menu (⋮), and choose **"Install app"** (or **"Add to Home screen"**). Some versions of Chrome also show an install icon directly in the address bar.
+- **iOS / Safari** — open the live demo link, tap the **Share** button, then choose **"Add to Home Screen"**. Safari on iOS doesn't support the install-app prompt Chrome/Android use, so this Share-sheet route is the only way to add it there.
 
 ## Features
 
@@ -67,7 +74,7 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.0").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.1").
 
 ### Analytics
 
@@ -90,11 +97,14 @@ npm test
 
 - **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including both screens (entry and solving), the candidate buttons (placed into the solving grid's bottom-right corner cell by `sudoku-ui.js`), the "Iteration: N" corner panel, and the Help modal.
 - **`sudoku-logic.js`** — pure puzzle-solving logic with no DOM dependencies: tracking sets for rows/columns/boxes, naked-singles propagation, MRV backtracking search, solution counting/uniqueness checks, difficulty rating, puzzle generation, and save-record parsing. Works equally under Node or in the browser.
-- **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, and the Help modal. Relies entirely on `sudoku-logic.js` for the actual solving rules.
+- **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, the Help modal, and registering the service worker. Relies entirely on `sudoku-logic.js` for the actual solving rules.
+- **`manifest.json`** — the PWA web app manifest (name, icons, theme colors, display mode) used for "Add to Home Screen" installs.
+- **`sw.js`** — the service worker: precaches the app's static files on install so they still load offline, while always going straight to the network for `stats-snapshot.json` and the GoatCounter requests so visit stats never show stale offline data.
+- **`icons/`** — the app icon, as an SVG source (`icon.svg`) plus the generated PNG sizes the manifest and `apple-touch-icon` links reference.
 - **`tests/`** — the undo/redo test suite described above.
 
 ## Credits
 
 Built by **Gil Shannon**.
 
-This project is open source — check out the code on GitHub: [https://github.com/GMShannon99/sudoku-web](https://github.com/GMShannon99/sudoku-web)
+This project is open source — check out the code on GitHub: [https://github.com/GMShannon99/Sudoku-App](https://github.com/GMShannon99/Sudoku-App)
