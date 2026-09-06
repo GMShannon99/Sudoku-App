@@ -59,6 +59,10 @@ On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — wh
 
 The **Write to File** button exports the current grid (givens plus whatever you've filled in) as a text record, in the same format Paste Puzzle understands. Each click saves a **new** file named `Sudoku_Save.txt` to your browser's default downloads location — browsers typically avoid overwriting the previous one automatically (e.g. by appending `(1)`, `(2)`, etc.), so repeated clicks will accumulate multiple files rather than replacing the last save.
 
+### Print Puzzle
+
+The **Print Puzzle** button downloads a printable JPG image (`Sudoku_Print.jpg`) of the current puzzle, sized for Letter-size (8.5×11in) portrait printing, so it can be worked on with pen or pencil. Before generating anything, it checks whether the current entries actually have a valid solution (reusing the same solver used everywhere else); if not, a popup explains that the puzzle has no valid solution and nothing is downloaded. The image includes a header (page title, difficulty, and today's date), the full 9×9 grid with thin cell borders and thicker 3×3 box borders, the given clues shaded with a light grey background (guesses stay on a plain background so the two are easy to tell apart on paper), the same row/column missing-digit numbers shown on screen, and — for every still-empty square — its remaining valid candidate digits laid out in a small 3×3 mini-grid inside the cell. Works the same way whether running from the browser or from the installed home-screen app.
+
 ### Help
 
 A **Help** button (available on both screens) opens an in-app documentation modal with two top-level sections: a general "How to Play Sudoku" primer on the rules of the game itself, followed by "Sudoku Web Functionality," covering every app feature above, along with the author's name and contact email, the current version number, and the date it was last updated.
@@ -74,7 +78,7 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.2").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.3").
 
 ### Analytics
 

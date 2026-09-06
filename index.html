@@ -585,6 +585,7 @@
     <div class="controls">
       <button id="saveBtn">Save</button>
       <button class="secondary" id="writeToFileBtn" title="Each save creates a new file in your browser's default downloads folder.">Write to File</button>
+      <button class="secondary" id="printBtn" title="Downloads a printable JPG image of the current puzzle.">Print Puzzle</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
@@ -720,6 +721,13 @@
           puzzle, or starting a new one) &mdash; purely cosmetic, and both the
           animation and its sound are skipped if your browser's reduced-motion
           setting is on.</li>
+          <li><strong>Print Puzzle</strong> &mdash; Downloads a printable JPG image of the
+          puzzle exactly as it currently stands: given clues shaded with a light grey
+          background, your entries on a plain background, the same row/column missing-digit
+          numbers shown on screen, and every empty square's remaining valid candidates laid
+          out in a small grid so it can be worked on with pen or pencil. If the current
+          entries have no valid solution at all, a popup explains this instead and no image
+          is generated.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>
@@ -756,6 +764,22 @@
       <div class="modal-footer">
         <button class="secondary" id="statsBtn">View Puzzle Stats</button>
         <button id="helpCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRINT PUZZLE: NO VALID SOLUTION POPUP ================= -->
+  <!-- Shown by printBtn's handler (see sudoku-ui.js) instead of generating an
+       image, whenever the current grid has no valid solution at all. Reuses
+       the same modal-overlay/modal pattern as #helpOverlay/#countryStatsOverlay. -->
+  <div class="modal-overlay" id="printInvalidOverlay">
+    <div class="modal">
+      <h2>Cannot Print</h2>
+      <div class="modal-body">
+        <p>There are no valid solutions for the current puzzle, so it will not print.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="printInvalidCloseBtn">Close</button>
       </div>
     </div>
   </div>

@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.2.2";
+const APP_VERSION = "1.2.3";
 const HELP_LAST_UPDATED = "September 6, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -48,6 +48,35 @@ const PASTE_VALIDATION_MAX_ITERATIONS = 50_000;
 // accepted consequence of reusing this given-clue-oriented file format for
 // a live snapshot instead of a pure puzzle definition.
 const SAVE_FILE_NAME = "Sudoku_Save.txt";
+
+// Print Puzzle downloads. Letter-size (8.5in x 11in) portrait at a
+// print-appropriate 150 DPI -- 8.5*150 x 11*150 -- rendered on an in-memory
+// <canvas> (never attached to the DOM) and exported as a JPG the same way
+// SAVE_FILE_NAME above already downloads a file: build an object URL (or in
+// this case a data URL -- canvas.toDataURL() -- since there's no Blob step
+// needed), point a throwaway <a download> at it, and click it.
+const PRINT_FILE_NAME = "Sudoku_Print.jpg";
+const PRINT_JPEG_QUALITY = 0.92;
+const PRINT_CANVAS_WIDTH = 1275;
+const PRINT_CANVAS_HEIGHT = 1650;
+
+// Layout constants for renderPrintCanvas() below. PRINT_CELL_SIZE=100 was
+// picked so the grid (900px) plus the row-missing-label column to its right
+// lands with near-symmetric left/right margins (~80px each) at this canvas
+// width -- see renderPrintCanvas()'s comment for the rest of the layout math.
+// All exact pixel values here (canvas resolution, margins, cell size, label
+// column sizes, candidate mini-grid font size) are judgment calls with no
+// single "correct" answer -- easy to retune if the printed output looks off.
+const PRINT_MARGIN_X = 80;
+const PRINT_CELL_SIZE = 100;
+const PRINT_GRID_SIZE = PRINT_CELL_SIZE * 9;
+const PRINT_ROW_LABEL_GAP = 16;
+const PRINT_COL_LABEL_GAP = 16;
+const PRINT_COL_LABEL_HEIGHT = 200;
+const PRINT_HEADER_HEIGHT = 170;
+const PRINT_GIVEN_FILL = "#d9d3c4";
+const PRINT_INK = "#241c15";
+const PRINT_HINT_INK = "#6b4a32";
 
 let puzzle = null;
 let givenCells = new Set();
@@ -886,6 +915,201 @@ document.getElementById("writeToFileBtn").addEventListener("click", () => {
   setStatus(`Saved to ${SAVE_FILE_NAME}.`, "success");
 });
 
+/* ===================== PRINT PUZZLE ===================== */
+
+const printInvalidOverlayEl = document.getElementById("printInvalidOverlay");
+
+function showPrintInvalidPopup() {
+  printInvalidOverlayEl.classList.add("active");
+}
+
+function hidePrintInvalidPopup() {
+  printInvalidOverlayEl.classList.remove("active");
+}
+
+// Draws the current grid onto a fresh, never-attached-to-the-DOM <canvas>
+// and returns it as a JPG data URL. Letter-size portrait layout: a header
+// (title/difficulty/date), the 9x9 grid (givens shaded grey, guesses on a
+// plain background, empty cells showing their remaining candidates in a
+// small 3x3 mini-grid), and the same row/column missing-digit labels shown
+// on screen (see updateCandidateLabels()) in the same right/bottom
+// positions. Only ever called after the caller has confirmed grid has a
+// valid solution -- this function itself doesn't check.
+function renderPrintCanvas(grid) {
+  const canvas = document.createElement("canvas");
+  canvas.width = PRINT_CANVAS_WIDTH;
+  canvas.height = PRINT_CANVAS_HEIGHT;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, PRINT_CANVAS_WIDTH, PRINT_CANVAS_HEIGHT);
+
+  // Vertically center the whole header+grid+column-labels block; the grid's
+  // left edge stays a fixed PRINT_MARGIN_X from the canvas edge (see the
+  // PRINT_CELL_SIZE comment above for why that lands near-symmetric).
+  const contentHeight =
+    PRINT_HEADER_HEIGHT + PRINT_GRID_SIZE + PRINT_COL_LABEL_GAP + PRINT_COL_LABEL_HEIGHT;
+  const topY = Math.round((PRINT_CANVAS_HEIGHT - contentHeight) / 2);
+  const gridLeft = PRINT_MARGIN_X;
+  const gridTop = topY + PRINT_HEADER_HEIGHT;
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = PRINT_INK;
+  ctx.font = "bold 34px Georgia, serif";
+  ctx.fillText(
+    document.getElementById("pageTitle").textContent,
+    PRINT_CANVAS_WIDTH / 2,
+    topY + 40
+  );
+  ctx.font = "22px Georgia, serif";
+  ctx.fillText(
+    difficultyLineEl.textContent || `Difficulty Level: ${SudokuLogic.rateDifficulty(currentReiterationCount)}`,
+    PRINT_CANVAS_WIDTH / 2,
+    topY + 78
+  );
+  ctx.font = "20px monospace";
+  ctx.fillStyle = PRINT_HINT_INK;
+  ctx.fillText(
+    new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }),
+    PRINT_CANVAS_WIDTH / 2,
+    topY + 110
+  );
+
+  const { rowMissing, colMissing } = SudokuLogic.buildTrackingSets(grid);
+
+  // Given-cell background shading (drawn before the grid lines/digits so
+  // the lines and text land cleanly on top of it).
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (!givenCells.has(`${r},${c}`)) continue;
+      ctx.fillStyle = PRINT_GIVEN_FILL;
+      ctx.fillRect(
+        gridLeft + c * PRINT_CELL_SIZE,
+        gridTop + r * PRINT_CELL_SIZE,
+        PRINT_CELL_SIZE,
+        PRINT_CELL_SIZE
+      );
+    }
+  }
+
+  // Grid lines: thin between individual cells, thicker every 3rd line
+  // (the 3x3 box boundaries), same structure as the on-screen .box-right/
+  // .box-bottom borders.
+  ctx.strokeStyle = PRINT_INK;
+  for (let i = 0; i <= 9; i++) {
+    ctx.lineWidth = i % 3 === 0 ? 5 : 1.5;
+    const x = gridLeft + i * PRINT_CELL_SIZE;
+    ctx.beginPath();
+    ctx.moveTo(x, gridTop);
+    ctx.lineTo(x, gridTop + PRINT_GRID_SIZE);
+    ctx.stroke();
+
+    const y = gridTop + i * PRINT_CELL_SIZE;
+    ctx.beginPath();
+    ctx.moveTo(gridLeft, y);
+    ctx.lineTo(gridLeft + PRINT_GRID_SIZE, y);
+    ctx.stroke();
+  }
+
+  // Digits (givens vs. guesses) and, for every still-empty cell, its valid
+  // candidates -- same computeValidCandidates() the solving screen's
+  // candidate buttons use -- arranged in a small 3x3 mini-grid within the
+  // cell (digit d sits at mini-row floor((d-1)/3), mini-col (d-1)%3).
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const key = `${r},${c}`;
+      const x = gridLeft + c * PRINT_CELL_SIZE;
+      const y = gridTop + r * PRINT_CELL_SIZE;
+      const val = grid[r][c];
+
+      if (val !== 0) {
+        const isGiven = givenCells.has(key);
+        ctx.fillStyle = PRINT_INK;
+        ctx.font = `${isGiven ? "bold " : ""}44px monospace`;
+        ctx.fillText(String(val), x + PRINT_CELL_SIZE / 2, y + PRINT_CELL_SIZE / 2);
+      } else {
+        const candidates = new Set(computeValidCandidates(r, c));
+        const sub = PRINT_CELL_SIZE / 3;
+        ctx.font = "18px monospace";
+        ctx.fillStyle = PRINT_HINT_INK;
+        for (let digit = 1; digit <= 9; digit++) {
+          if (!candidates.has(digit)) continue;
+          const miniRow = Math.floor((digit - 1) / 3);
+          const miniCol = (digit - 1) % 3;
+          ctx.fillText(
+            String(digit),
+            x + miniCol * sub + sub / 2,
+            y + miniRow * sub + sub / 2
+          );
+        }
+      }
+    }
+  }
+
+  // Row-missing labels, to the right of the grid -- same digits/format as
+  // updateCandidateLabels() (space-joined, checkmark once complete).
+  ctx.textAlign = "left";
+  ctx.font = "20px monospace";
+  ctx.fillStyle = PRINT_INK;
+  for (let r = 0; r < 9; r++) {
+    const digits = [...rowMissing[r]].sort((a, b) => a - b);
+    const text = digits.length ? digits.join(" ") : "✓";
+    ctx.fillText(
+      text,
+      gridLeft + PRINT_GRID_SIZE + PRINT_ROW_LABEL_GAP,
+      gridTop + r * PRINT_CELL_SIZE + PRINT_CELL_SIZE / 2
+    );
+  }
+
+  // Column-missing labels, stacked vertically beneath each column -- same
+  // one-digit-per-line layout as the on-screen .col-missing labels.
+  ctx.textAlign = "center";
+  ctx.font = "16px monospace";
+  const colLabelLineHeight = 20;
+  for (let c = 0; c < 9; c++) {
+    const digits = [...colMissing[c]].sort((a, b) => a - b);
+    const lines = digits.length ? digits.map(String) : ["✓"];
+    const x = gridLeft + c * PRINT_CELL_SIZE + PRINT_CELL_SIZE / 2;
+    let y = gridTop + PRINT_GRID_SIZE + PRINT_COL_LABEL_GAP + colLabelLineHeight / 2;
+    for (const line of lines) {
+      ctx.fillText(line, x, y);
+      y += colLabelLineHeight;
+    }
+  }
+
+  return canvas.toDataURL("image/jpeg", PRINT_JPEG_QUALITY);
+}
+
+document.getElementById("printBtn").addEventListener("click", () => {
+  clearIterationCount();
+
+  const grid = readGrid(solvingCells);
+  const solvabilityCheck = grid.map((row) => row.slice());
+  const { solved } = SudokuLogic.solve(solvabilityCheck);
+  if (!(solved && isGridFullyValid(solvabilityCheck))) {
+    showPrintInvalidPopup();
+    return;
+  }
+
+  const dataUrl = renderPrintCanvas(grid);
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = PRINT_FILE_NAME;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setStatus(`Downloaded ${PRINT_FILE_NAME}.`, "success");
+});
+
+document.getElementById("printInvalidCloseBtn").addEventListener("click", hidePrintInvalidPopup);
+printInvalidOverlayEl.addEventListener("click", (event) => {
+  if (event.target === printInvalidOverlayEl) hidePrintInvalidPopup();
+});
+
 document.getElementById("solveBtn").addEventListener("click", () => {
   clearSelection();
   attemptSolve();
@@ -1205,6 +1429,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideCountryStatsPopup();
     hideHelp();
+    hidePrintInvalidPopup();
   }
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
