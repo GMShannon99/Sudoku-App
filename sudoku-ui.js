@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "3.0.0";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -1282,28 +1282,48 @@ function redoLastMove() {
 
 const helpOverlayEl = document.getElementById("helpOverlay");
 const statsResultEl = document.getElementById("statsResult");
-const countryStatsOverlayEl = document.getElementById("countryStatsOverlay");
-const countryStatsResultEl = document.getElementById("countryStatsResult");
 const statsBtnEl = document.getElementById("statsBtn");
 
-// How long the shatter (see shatterButton() above) plays before the
-// country-stats popup opens underneath the falling pieces -- just long
-// enough to read as "the button broke, and now here's the popup," not so
-// long it delays the popup's own (independent) fetch for no reason.
-const STATS_SHATTER_POPUP_DELAY_MS = 350;
+// CountAPI's free "hit" counter -- incrementing GET that bumps the given
+// key by 1 and returns the new total in `value`. Uses the exact same key
+// as sudoku-web so both surfaces contribute to and display one shared
+// total rather than two separate counts. Fired exactly once here, at
+// script load (mirroring where the old GoatCounter tracking pixel used to
+// silently increment on every page view) -- calling /hit/ again from the
+// button below would inflate the total by 1 on every click, so
+// showPuzzleStats() only ever displays this one request's result.
+const COUNTAPI_KEY = "sudoku-gilshannon-live-total";
+const COUNTAPI_HIT_URL = `https://countapi.mileshilliard.com/api/v1/hit/${COUNTAPI_KEY}`;
+const COUNTAPI_FETCH_TIMEOUT_MS = 6000;
 
-// GoatCounter's public "visitor counter" endpoint -- a read-only, no-login
-// JSON/image/HTML endpoint meant for embedding on third-party pages (see
-// https://www.goatcounter.com/help/visitor-counter), NOT the dashboard at
-// sudoku-gilshannon.goatcounter.com itself. The special "TOTAL" path (no
-// leading slash, case-sensitive) asks for the site-wide visit count rather
-// than one page's. Requires the site owner to have turned on "Allow adding
-// visitor counts on your website" in GoatCounter's settings -- until that's
-// done this 403s, which showPuzzleStats() below treats the same as any
-// other failure.
-const GOATCOUNTER_CODE = "sudoku-gilshannon";
-const STATS_URL = `https://${GOATCOUNTER_CODE}.goatcounter.com/counter/TOTAL.json`;
-const STATS_FETCH_TIMEOUT_MS = 6000;
+// Guarded rather than called bare -- this runs at script load, including
+// under the Node/jsdom test suite (tests/undo-redo.test.js), which has no
+// global fetch. Falling back to a rejected promise there (and in any real
+// browser where fetch is somehow unavailable) keeps this a no-op instead
+// of a load-time crash; showPuzzleStats() already treats a rejection as
+// "Puzzle stats are currently unavailable."
+const liveHitCountRequest =
+  typeof fetch === "function"
+    ? (() => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), COUNTAPI_FETCH_TIMEOUT_MS);
+        return fetch(COUNTAPI_HIT_URL, { cache: "no-store", signal: controller.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
+            return response.json();
+          })
+          .then((data) => {
+            if (typeof data.value !== "number") {
+              throw new Error("Unexpected response shape from CountAPI.");
+            }
+            return data.value;
+          });
+      })()
+    : Promise.reject(new Error("fetch is not available in this environment."));
+// Silences "unhandled rejection" noise if this fails (or is skipped) before
+// the button's ever clicked -- showPuzzleStats() below attaches its own,
+// separate handler to the same promise when it actually needs the result.
+liveHitCountRequest.catch(() => {});
 
 // Hides and clears any previously shown stats. Called every time the Help
 // modal opens so "View Puzzle Stats" always has to be clicked fresh --
@@ -1314,135 +1334,31 @@ function resetStatsResult() {
   statsResultEl.textContent = "";
 }
 
-// Same idea as resetStatsResult() above, but for the separate country-
-// breakdown popup -- see showCountryStats() for why this is a wholly
-// independent element/function pair rather than sharing statsResultEl.
-function resetCountryStatsResult() {
-  countryStatsResultEl.hidden = true;
-  countryStatsResultEl.classList.remove("error");
-  countryStatsResultEl.textContent = "";
-}
-
-// Fetches the site's total visit count from GoatCounter's public counter
-// endpoint and renders it into statsResultEl -- or a plain "unavailable"
-// message if the request fails, times out, or the response isn't shaped
-// the way GoatCounter's docs say it should be. Built with textContent/DOM
-// nodes rather than innerHTML since `count` comes from a third party.
+// Renders the one-time liveHitCountRequest result into statsResultEl -- or
+// a plain "unavailable" message if that request failed, timed out, or
+// came back an unexpected shape. Never re-fetches: CountAPI's endpoint
+// increments on every call, so every click here just displays the single
+// result from the page-load request above.
 async function showPuzzleStats() {
   statsResultEl.hidden = false;
   statsResultEl.classList.remove("error");
   statsResultEl.textContent = "Loading puzzle stats…";
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS);
-
   try {
-    // A cache-busting query param, not just cache: "no-store" -- iOS's
-    // standalone (Home Screen) PWA runtime has a known WebKit bug where
-    // no-store/no-cache fetch directives aren't reliably honored, even
-    // though the exact same request works fine in a regular Safari tab.
-    // Changing the URL itself sidesteps that: there's no cache key (local
-    // HTTP cache or any upstream/CDN cache in front of GoatCounter) that
-    // can match a previous response, regardless of which layer is or
-    // isn't respecting our cache headers. sw.js's isNetworkOnly() already
-    // keeps this request out of the service worker's Cache Storage
-    // entirely, so this only needs to defeat caches outside our control.
-    const bustedUrl = `${STATS_URL}?_=${Date.now()}`;
-    const response = await fetch(bustedUrl, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
-
-    const data = await response.json();
-    if (typeof data.count !== "string" && typeof data.count !== "number") {
-      throw new Error("Unexpected response shape from GoatCounter.");
-    }
+    const count = await liveHitCountRequest;
 
     statsResultEl.textContent = "";
     statsResultEl.append("Total visits: ");
     const strong = document.createElement("strong");
-    strong.textContent = String(data.count);
+    strong.textContent = String(count);
     statsResultEl.append(strong);
     const note = document.createElement("span");
     note.className = "stats-note";
-    note.textContent = "Public GoatCounter data — read-only, no login required.";
+    note.textContent = "Live hit count — shared with sudoku-web.";
     statsResultEl.append(note);
   } catch (e) {
     statsResultEl.classList.add("error");
     statsResultEl.textContent = "Puzzle stats are currently unavailable.";
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Relative path, since stats-snapshot.json is written to the repo root by
-// the "Update Puzzle Stats" GitHub Action (see .github/workflows/
-// update-stats.yml and scripts/fetch_goatcounter_stats.py) and served
-// alongside index.html from the same origin -- no GoatCounter API token
-// belongs in this front-end code, only that workflow's Actions secret has
-// one.
-const STATS_SNAPSHOT_URL = "stats-snapshot.json";
-const STATS_SNAPSHOT_FETCH_TIMEOUT_MS = 6000;
-
-// Fetches the pre-generated country-visit breakdown and renders it into
-// countryStatsResultEl (inside the country-stats popup, not the Help
-// modal) -- or "Stats unavailable" if the file is missing, the request
-// fails/times out, or its JSON isn't shaped as expected. Kept entirely
-// separate from showPuzzleStats() above -- its own element, own
-// AbortController, own try/catch -- so a GoatCounter counter-endpoint
-// hiccup and a missing/broken stats-snapshot.json can never affect each
-// other; each shows its own result (or its own failure) independently.
-async function showCountryStats() {
-  countryStatsResultEl.hidden = false;
-  countryStatsResultEl.classList.remove("error");
-  countryStatsResultEl.textContent = "Loading country breakdown…";
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), STATS_SNAPSHOT_FETCH_TIMEOUT_MS);
-
-  try {
-    // cache: "no-store" bypasses the ordinary HTTP cache, not just the
-    // service worker's Cache Storage -- GitHub Pages serves this file with
-    // `Cache-Control: max-age=600`, and the service worker already lets this
-    // request go straight to the network (see sw.js's isNetworkOnly()), but
-    // without this option the browser's own HTTP cache could still hand back
-    // a response cached from up to 10 minutes ago instead of hitting the
-    // network at all.
-    const response = await fetch(STATS_SNAPSHOT_URL, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
-
-    const data = await response.json();
-    if (
-      typeof data.updated !== "string" ||
-      !Array.isArray(data.countries) ||
-      !data.countries.every(
-        (c) => c && typeof c.country === "string" && typeof c.count === "number"
-      )
-    ) {
-      throw new Error("Unexpected shape in stats-snapshot.json.");
-    }
-
-    countryStatsResultEl.textContent = "";
-    const heading = document.createElement("div");
-    heading.textContent = `Visitor countries (updated ${data.updated}):`;
-    countryStatsResultEl.append(heading);
-
-    const list = document.createElement("ul");
-    for (const { country, count } of data.countries) {
-      const li = document.createElement("li");
-      li.textContent = `${country} — ${count}`;
-      list.append(li);
-    }
-    countryStatsResultEl.append(list);
-  } catch (e) {
-    countryStatsResultEl.classList.add("error");
-    countryStatsResultEl.textContent = "Stats unavailable";
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 
@@ -1458,21 +1374,6 @@ function hideHelp() {
   helpOverlayEl.classList.remove("active");
 }
 
-// Opens the country-stats popup layered on top of the Help modal (both
-// stay active at once -- closing this popup leaves the Help modal open
-// behind it) and kicks off its fetch. See showCountryStats() for the fetch
-// itself; this just owns the popup's own show/hide state.
-function showCountryStatsPopup() {
-  resetCountryStatsResult();
-  countryStatsOverlayEl.classList.add("active");
-  showCountryStats();
-}
-
-function hideCountryStatsPopup() {
-  countryStatsOverlayEl.classList.remove("active");
-  resetButtonShatter(statsBtnEl);
-}
-
 document.getElementById("entryHelpBtn").addEventListener("click", () => {
   clearEntryHint();
   showHelp();
@@ -1482,35 +1383,14 @@ document.getElementById("solvingHelpBtn").addEventListener("click", () => {
   showHelp();
 });
 statsBtnEl.addEventListener("click", () => {
-  // Two independent fetches, not one awaiting the other -- see
-  // showCountryStats()'s comment for why they must stay decoupled. One
-  // renders into the Help modal itself (showPuzzleStats), the other opens
-  // a separate popup on top of it (showCountryStatsPopup). The shatter is
-  // purely cosmetic on top of that: skipped entirely under
-  // prefers-reduced-motion (both fetches then start immediately, exactly
-  // as before), otherwise it just delays the popup opening by
-  // STATS_SHATTER_POPUP_DELAY_MS for comedic timing -- it never touches
-  // either fetch.
+  // The shatter is purely cosmetic -- skipped entirely under
+  // prefers-reduced-motion -- and never touches showPuzzleStats() itself.
   showPuzzleStats();
-  if (prefersReducedMotion.matches) {
-    showCountryStatsPopup();
-  } else {
-    shatterButton(statsBtnEl);
-    setTimeout(showCountryStatsPopup, STATS_SHATTER_POPUP_DELAY_MS);
-  }
+  if (!prefersReducedMotion.matches) shatterButton(statsBtnEl);
 });
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {
   if (event.target === helpOverlayEl) hideHelp();
-});
-// Manual escape hatch: re-runs the same fetch showCountryStats() already
-// does on open (cache: "no-store", so it always hits the network) in case
-// stats ever look stale for any reason -- no need to close/reopen the popup
-// or the whole app to force a fresh read.
-document.getElementById("countryStatsRefreshBtn").addEventListener("click", showCountryStats);
-document.getElementById("countryStatsCloseBtn").addEventListener("click", hideCountryStatsPopup);
-countryStatsOverlayEl.addEventListener("click", (event) => {
-  if (event.target === countryStatsOverlayEl) hideCountryStatsPopup();
 });
 document.addEventListener("keydown", (event) => {
   // Any key press clears the candidate display -- other than pressing a
@@ -1523,7 +1403,6 @@ document.addEventListener("keydown", (event) => {
   if (selectedCell !== null) clearSelection();
 
   if (event.key === "Escape") {
-    hideCountryStatsPopup();
     hideHelp();
     hidePrintInvalidPopup();
   }

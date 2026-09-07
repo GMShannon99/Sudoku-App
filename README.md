@@ -72,20 +72,13 @@ A **Help** button (available on both screens) opens an in-app documentation moda
 
 ### Puzzle stats
 
-A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. Clicking it fetches two independent pieces of data — read-only, public data, with no login involved — and shows each in its own place: the total-visits count renders right there in the Help modal, while the country breakdown opens in a separate pop-up layered on top of the Help modal (which stays open behind it). Nothing is fetched until the button is clicked, and neither piece is displayed anywhere else on the page.
+A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. It shows a live hit count right there in the Help modal, fed by [CountAPI](https://countapi.mileshilliard.com/)'s free `/hit/` endpoint under the shared key `sudoku-gilshannon-live-total` — the exact same key sudoku-web uses, so both sites contribute to and display one combined total rather than two separate counts. That endpoint increments on every call, so it's only ever requested once, at page load (mirroring where the old analytics tracking pixel used to silently record a visit); clicking the button just displays that one already-fetched result rather than triggering a new hit. If the page-load request fails, times out, or comes back an unexpected shape, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
 
-- **Total visits** — pulled live from GoatCounter's public counter endpoint, shown directly in the Help modal. If the request fails, times out, or GoatCounter's response isn't shaped as expected, the modal shows "Puzzle stats are currently unavailable." instead of breaking or failing silently.
-- **Visitor countries** — a country-by-country visitor breakdown, shown in its own pop-up titled "Sudoku Country Usage Stats by Gil Shannon," with a note underneath the heading that the figures are "Updated automatically once a week, or manually by the site admin." The data itself is read from a `stats-snapshot.json` file in the repo root, generated automatically by the **"Update Puzzle Stats"** GitHub Actions workflow (`.github/workflows/update-stats.yml`), which runs on a schedule (8:00 AM UTC every Monday) and can also be triggered manually from the repo's **Actions** tab via "Run workflow." The workflow calls GoatCounter's `/api/v0/stats/locations` API (see `scripts/fetch_goatcounter_stats.py`) and commits the updated snapshot straight to `main`. **This workflow requires a `GOATCOUNTER_TOKEN` repo secret** (a GoatCounter API token) to be set under Settings → Secrets and variables → Actions before it can run successfully. If `stats-snapshot.json` is missing, unreachable, or malformed, the pop-up shows "Stats unavailable" — this fetch is entirely independent of the total-visits one above, so one failing never affects the other. The fetch always uses `cache: "no-store"`, bypassing both the service worker's cache (which already excludes this file, see `sw.js` below) and the browser's ordinary HTTP cache (GitHub Pages serves this file with a 10-minute `Cache-Control: max-age`), so the popup never shows stats older than the last update. A **Refresh Stats** button next to Close re-runs that same fetch on demand, as a manual escape hatch. The pop-up closes the same way the Help modal does: its own Close button, clicking outside it, or pressing Escape.
-
-**Fun extra:** clicking "View Puzzle Stats" also shatters the button itself into a handful of jagged pieces that tumble off the bottom of the screen, with a synthesized glass-breaking crash (same Web Audio API approach as the app's existing invalid-entry beep, no audio files), before the country-stats pop-up appears — purely cosmetic, both the animation and its sound skipped automatically if the browser's reduced-motion setting is on, and the button always comes back intact the next time it's needed.
+**Fun extra:** clicking "View Puzzle Stats" also shatters the button itself into a handful of jagged pieces that tumble off the bottom of the screen, with a synthesized glass-breaking crash (same Web Audio API approach as the app's existing invalid-entry beep, no audio files) — purely cosmetic, both the animation and its sound skipped automatically if the browser's reduced-motion setting is on, and the button always comes back intact the next time the Help modal opens.
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v2.0.0").
-
-### Analytics
-
-The page includes [GoatCounter](https://www.goatcounter.com/) analytics tracking to record page visits.
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v3.0.0").
 
 ## How to run it
 
@@ -106,9 +99,14 @@ npm test
 - **`sudoku-logic.js`** — pure puzzle-solving logic with no DOM dependencies: tracking sets for rows/columns/boxes, naked-singles propagation, MRV backtracking search, solution counting/uniqueness checks, difficulty rating, puzzle generation, and save-record parsing. Works equally under Node or in the browser.
 - **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, the Help modal, and registering the service worker. Relies entirely on `sudoku-logic.js` for the actual solving rules.
 - **`manifest.json`** — the PWA web app manifest (name, icons, theme colors, display mode) used for "Add to Home Screen" installs.
-- **`sw.js`** — the service worker: precaches the app's static files on install so they still load offline, while always going straight to the network for `stats-snapshot.json` and the GoatCounter requests so visit stats never show stale offline data.
+- **`sw.js`** — the service worker: precaches the app's static files on install so they still load offline, while always going straight to the network for the CountAPI live-count request so it never shows a stale count or gets replayed from a cached response.
 - **`icons/`** — the app icon, as an SVG source (`icon.svg`) plus the generated PNG sizes the manifest and `apple-touch-icon` links reference.
 - **`tests/`** — the undo/redo test suite described above.
+
+## Version history
+
+- **v3.0.0** — Replaced GoatCounter with [CountAPI](https://countapi.mileshilliard.com/) for the live hit counter (shared with sudoku-web via one key, `sudoku-gilshannon-live-total`). Removed GoatCounter entirely: the tracking script, the counter fetch, and the weekly country-stats breakdown feature built on top of it (the popup, its button, `stats-snapshot.json`, and the `update-stats.yml` GitHub Action). "View Puzzle Stats" now just shows the shared live total.
+- **v2.0.0** — Prior release.
 
 ## Credits
 

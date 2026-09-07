@@ -454,13 +454,9 @@
 
   /* Populated only after clicking "View Puzzle Stats" (see statsBtn's
      handler in sudoku-ui.js) -- hidden the rest of the time, and re-hidden
-     every time its containing modal opens, so this is the only place stats
-     are ever shown and only ever as a direct result of that click.
-     #statsResult (pageview total) lives in the Help modal itself;
-     #countryStatsResult (country breakdown) lives in the separate
-     #countryStatsOverlay popup that button also opens. Two independent
-     blocks fed by two independent fetches -- one failing has no effect on
-     the other. */
+     every time its containing modal opens, so this is the only place the
+     live hit count is ever shown and only ever as a direct result of that
+     click. */
   .stats-result {
     padding: 8px 22px 14px;
     font-size: 0.8rem;
@@ -474,22 +470,13 @@
   .stats-result ul { margin: 6px 0 0; padding-left: 18px; }
   .stats-result li { margin-bottom: 3px; }
 
-  /* #countryStatsOverlay reuses .modal-overlay/.modal exactly like
-     #helpOverlay, but sits above it (higher z-index, independent of DOM
-     order) since it's meant to stack on top of the Help modal rather than
-     replace it -- "View Puzzle Stats" leaves the Help modal open behind
-     this popup. */
-  #countryStatsOverlay { z-index: 11; }
-
   /* Clones of a button created by shatterButton() in sudoku-ui.js (used by
      both the "View Puzzle Stats" and Solve buttons) -- each one clip-path'd
      down to a single jagged slice of the button and fixed-positioned
      exactly over its real on-screen spot, then animated falling off the
-     bottom of the screen. z-index is higher than both Help-related overlays
-     above so falling pieces stay visible even after the country-stats
-     popup has opened underneath them. Skipped entirely under
-     prefers-reduced-motion (checked in JS -- no shard is ever created in
-     that case, so none of this ever applies). */
+     bottom of the screen. Skipped entirely under prefers-reduced-motion
+     (checked in JS -- no shard is ever created in that case, so none of
+     this ever applies). */
   .shatter-shard {
     position: fixed;
     margin: 0;
@@ -788,16 +775,12 @@
         backtracking guesses the solver needed for this exact puzzle.</p>
 
         <h3>Puzzle stats</h3>
-        <p>The &ldquo;View Puzzle Stats&rdquo; button below shows the site's total visit
-        count right here, pulled live from the public GoatCounter counter for this
-        site &mdash; read-only, public data, no login involved. This button is the
-        only place in the app where that count is ever shown; it stays hidden
-        otherwise. Clicking it also breaks the button itself apart with a
-        synthesized glass-breaking sound (both the animation and the sound are
-        skipped under reduced motion), before a separate pop-up opens with a
-        visitor country breakdown, which updates automatically once a week via a
-        scheduled GitHub Action (or on demand if run manually) rather than being
-        maintained by hand.</p>
+        <p>The &ldquo;View Puzzle Stats&rdquo; button below shows a live hit count right
+        here, shared with the sudoku-web site so both surfaces count toward one
+        combined total. This button is the only place in the app where that count
+        is ever shown; it stays hidden otherwise. Clicking it also breaks the
+        button itself apart with a synthesized glass-breaking sound (both the
+        animation and the sound are skipped under reduced motion).</p>
       </div>
       <div class="stats-result" id="statsResult" hidden></div>
       <div class="modal-footer">
@@ -818,7 +801,7 @@
   <!-- Shown by downloadJpgBtn's/printBtn's handlers (see sudoku-ui.js) instead
        of generating an image, whenever the current grid has no valid
        solution at all. Reuses the same modal-overlay/modal pattern as
-       #helpOverlay/#countryStatsOverlay. -->
+       #helpOverlay. -->
   <div class="modal-overlay" id="printInvalidOverlay">
     <div class="modal">
       <h2>Cannot Print</h2>
@@ -831,30 +814,8 @@
     </div>
   </div>
 
-  <!-- ================= COUNTRY STATS POPUP ================= -->
-  <!-- Opened by statsBtn alongside the Help modal (see sudoku-ui.js) --
-       stacks on top of #helpOverlay rather than replacing it, so the Help
-       modal stays open behind it. Reuses the same modal-overlay/modal
-       pattern/styling as #helpOverlay (dark board theme, close button,
-       click-outside-to-dismiss), just as a second, independent overlay. -->
-  <div class="modal-overlay" id="countryStatsOverlay">
-    <div class="modal">
-      <h2>Sudoku Country Usage Stats by Gil Shannon</h2>
-      <div class="modal-body">
-        <p class="help-meta">Updated automatically once a week, or manually by
-        the site admin.</p>
-      </div>
-      <div class="stats-result" id="countryStatsResult" hidden></div>
-      <div class="modal-footer">
-        <button id="countryStatsRefreshBtn">Refresh Stats</button>
-        <button id="countryStatsCloseBtn">Close</button>
-      </div>
-    </div>
-  </div>
 
 <script src="sudoku-logic.js"></script>
 <script src="sudoku-ui.js"></script>
-<script data-goatcounter="https://sudoku-gilshannon.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

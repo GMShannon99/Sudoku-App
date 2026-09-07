@@ -7,7 +7,7 @@
  * forever.
  */
 
-const CACHE_VERSION = "v6";
+const CACHE_VERSION = "v7";
 const CACHE_NAME = `sudoku-static-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -44,13 +44,14 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// The visitor-stats snapshot and the GoatCounter counter/beacon must always
-// be requested fresh -- never served from or written to the cache -- so
-// stats never get stuck showing stale offline data.
+// CountAPI's live hit counter must always be requested fresh -- never
+// served from or written to the cache -- both because it's a live count
+// that should never show stale offline data, and because it increments on
+// every call: serving a cached response would just mean showing an old
+// number, but writing one into Cache Storage risks it later being replayed
+// instead of a real hit.
 function isNetworkOnly(url) {
-  if (url.pathname.endsWith("stats-snapshot.json")) return true;
-  if (url.hostname === "gc.zgo.at") return true;
-  if (url.hostname.endsWith(".goatcounter.com")) return true;
+  if (url.hostname === "countapi.mileshilliard.com") return true;
   return false;
 }
 
