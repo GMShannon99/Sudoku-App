@@ -559,6 +559,7 @@ function goToEntryScreen() {
 function buildSolvingGrid() {
   solvingGridEl.innerHTML = "";
   selectedCell = null;
+  rcHighlightedKeys = [];
   clearCandidateButtons();
   solvingCells = buildGridDOM(solvingGridEl, {
     editableAll: false,
@@ -598,6 +599,11 @@ function buildSolvingGrid() {
 // selectSolvingCell), or null if nothing is selected.
 let selectedCell = null;
 
+// The "row,col" keys of cells currently wearing the pink row/column/box
+// highlight (see applySelectionHighlights), so clearSelectionHighlights
+// knows exactly which cells to un-highlight without scanning the whole grid.
+let rcHighlightedKeys = [];
+
 const candidateGridEl = document.getElementById("candidateGrid");
 
 // The digits that could legally go in (row, col) right now -- missing from
@@ -630,7 +636,33 @@ function clearSelection() {
     solvingCells[selectedCell].classList.remove("selected");
     selectedCell = null;
   }
+  clearSelectionHighlights();
   clearCandidateButtons();
+}
+
+// Adds the pink "rc-highlight" class to every cell sharing (row, col)'s
+// row, column, or 3x3 box -- including (row, col) itself, since its own
+// yellow .selected background-image reset (see index.html) always wins out
+// over this pink tint regardless of class order.
+function applySelectionHighlights(row, col) {
+  const box = SudokuLogic.boxIndex(row, col);
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (r !== row && c !== col && SudokuLogic.boxIndex(r, c) !== box) continue;
+      const key = `${r},${c}`;
+      solvingCells[key].classList.add("rc-highlight");
+      rcHighlightedKeys.push(key);
+    }
+  }
+}
+
+// Removes the pink highlight applied by applySelectionHighlights. Safe to
+// call when nothing is highlighted.
+function clearSelectionHighlights() {
+  for (const key of rcHighlightedKeys) {
+    solvingCells[key].classList.remove("rc-highlight");
+  }
+  rcHighlightedKeys = [];
 }
 
 function showCandidatesFor(row, col) {
@@ -646,10 +678,10 @@ function showCandidatesFor(row, col) {
 }
 
 // Click handler for editable solving cells only (given cells never get this
-// binding -- see buildGridDOM). Selects this cell: highlights it yellow and
-// shows its candidate buttons. Clicking a different cell than the one
-// already selected clears the old selection first; re-clicking the same
-// cell is a no-op.
+// binding -- see buildGridDOM). Selects this cell: highlights it yellow,
+// pink-tints its row/column/box, and shows its candidate buttons. Clicking
+// a different cell than the one already selected clears the old selection
+// first; re-clicking the same cell is a no-op.
 function selectSolvingCell(row, col) {
   const key = `${row},${col}`;
   if (selectedCell === key) return;
@@ -657,6 +689,7 @@ function selectSolvingCell(row, col) {
   clearSelection();
   selectedCell = key;
   solvingCells[key].classList.add("selected");
+  applySelectionHighlights(row, col);
   showCandidatesFor(row, col);
 }
 

@@ -31,7 +31,7 @@ Both the entry screen and the solving screen enforce the same rule as you type: 
 
 ### Click-to-see candidates
 
-Clicking an empty square on the solving screen highlights it in yellow and shows that square's currently valid candidate digits as small yellow buttons in the board's bottom-right corner, next to the row/column-missing labels. Clicking a candidate fills it in for you; typing a digit directly works too. The highlight and candidate buttons clear automatically once a value is entered, and also clear on any other key press or mouse click elsewhere on the page — clicking away, pressing Escape, Ctrl+Z/Ctrl+Shift+Z, arrow keys, and so on all dismiss them without filling the square.
+Clicking an empty square on the solving screen highlights it in yellow and shows that square's currently valid candidate digits as small yellow buttons in the board's bottom-right corner, next to the row/column-missing labels. At the same time, the clicked square's entire row, column, and 3×3 box get a subtle pink tint, so it's easy to trace at a glance which row/column/box the selection belongs to — the given clues' shading stays visible underneath the tint, and the selected square's own yellow highlight always stays the dominant color on that square rather than blending into the pink. Clicking a candidate fills it in for you; typing a digit directly works too. The highlight, pink tint, and candidate buttons clear automatically once a value is entered, and also clear on any other key press or mouse click elsewhere on the page — clicking away, pressing Escape, Ctrl+Z/Ctrl+Shift+Z, arrow keys, and so on all dismiss them without filling the square.
 
 ### Live row/column tracking
 

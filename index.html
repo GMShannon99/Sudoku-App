@@ -177,6 +177,21 @@
     cursor: default;
   }
 
+  /* Row/column/box highlight for the selected cell's neighbors (see
+     applySelectionHighlights() in sudoku-ui.js) -- a translucent pink
+     layered on top of whatever background-color the cell already has
+     (plain white, or the .given tan) via background-image rather than
+     background-color, so the shading underneath stays visible through the
+     tint. Declared after .given so its background-image wins the cascade
+     at equal specificity. On .selected/.solved-highlight cells this is
+     cancelled out entirely, because those set the `background` shorthand
+     with !important, which resets background-image to none regardless of
+     specificity/order -- so the yellow highlight always renders pure,
+     never blended with the pink. */
+  input.cell.rc-highlight {
+    background-image: linear-gradient(rgba(233, 30, 99, 0.22), rgba(233, 30, 99, 0.22));
+  }
+
   .row-missing {
     display: flex;
     align-items: center;
