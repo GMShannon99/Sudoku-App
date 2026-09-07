@@ -550,9 +550,42 @@
   #printArea { display: none; }
   @media print {
     html, body { background: #ffffff !important; }
+    /* body's normal on-screen box (flex layout, min-height: 100vh, and its
+       40px/60px top/bottom padding) is otherwise untouched by print -- only
+       *children* of body get hidden below. vh units don't reliably resolve
+       to "one physical page" during print (often the screen viewport
+       instead), so left as-is that forced height plus padding becomes real,
+       paginated space around the one visible image: blank pages before
+       and/or after it. Collapsing body down to exactly its content
+       eliminates that surplus space entirely. */
+    body {
+      display: block !important;
+      min-height: 0 !important;
+      height: auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
     body > *:not(#printArea) { display: none !important; }
-    #printArea { display: block !important; }
-    #printImage { width: 100%; height: auto; }
+    #printArea { display: block !important; margin: 0; }
+    /* Constrained by height, not width: #printImage's canvas is rendered at
+       exactly the Letter aspect ratio (1275x1650, see PRINT_CANVAS_WIDTH/
+       HEIGHT in sudoku-ui.js), so scaling it to width: 100% of the @page's
+       7.9in-wide printable area also scales it to nearly the full 10.4in
+       printable height -- leaving no room for #printFooter below it, which
+       would then spill onto its own second page. Capping the height at
+       10in instead reserves a guaranteed ~0.4in strip underneath for the
+       footer, while width: auto (from the same aspect ratio) still
+       comfortably clears the printable width, so the whole thing fits on
+       one page. */
+    #printImage { display: block; height: 10in; width: auto; max-width: 100%; margin: 0 auto; }
+    #printFooter {
+      display: block;
+      margin: 6px 0 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #8a8a8a;
+      text-align: center;
+    }
   }
   @page { margin: 0.3in; }
 </style>
@@ -794,8 +827,17 @@
   <!-- Populated by printBtn's handler (see sudoku-ui.js) with the same
        canvas-generated JPG data URL downloadJpgBtn saves to a file, then
        revealed via @media print (see <style> above) so window.print() has
-       something to print. Invisible on-screen at all other times. -->
-  <div id="printArea"><img id="printImage" alt="Printable Sudoku puzzle"></div>
+       something to print. Invisible on-screen at all other times.
+       #printFooter is a plain, static line (not drawn onto the canvas, so
+       it never ends up in the downloaded JPG) -- an explicit site credit
+       for the printed page, rather than relying on the browser's own
+       automatic print header/footer (page title/URL in small grey text),
+       which isn't guaranteed to appear the same way -- or at all -- across
+       browsers, devices, or a user's print settings. -->
+  <div id="printArea">
+    <img id="printImage" alt="Printable Sudoku puzzle">
+    <p id="printFooter">https://gmshannon99.github.io/Sudoku-App/</p>
+  </div>
 
   <!-- ================= PRINT PUZZLE: NO VALID SOLUTION POPUP ================= -->
   <!-- Shown by downloadJpgBtn's/printBtn's handlers (see sudoku-ui.js) instead
