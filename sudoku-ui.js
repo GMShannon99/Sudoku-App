@@ -1337,7 +1337,18 @@ async function showPuzzleStats() {
   const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(STATS_URL, { signal: controller.signal });
+    // cache: "no-store" bypasses the ordinary HTTP cache, not just the
+    // service worker's Cache Storage -- GoatCounter serves this endpoint
+    // with `Cache-Control: public` plus a multi-hour `Expires`, and the
+    // service worker already lets this request go straight to the network
+    // (see sw.js's isNetworkOnly()), but without this option the browser's
+    // own HTTP cache -- notably the long-lived one in iOS's WKWebView/PWA
+    // context -- could still hand back an hours-old response instead of a
+    // live count.
+    const response = await fetch(STATS_URL, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
     if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
 
     const data = await response.json();
