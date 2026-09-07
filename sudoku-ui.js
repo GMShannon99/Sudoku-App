@@ -1337,15 +1337,18 @@ async function showPuzzleStats() {
   const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS);
 
   try {
-    // cache: "no-store" bypasses the ordinary HTTP cache, not just the
-    // service worker's Cache Storage -- GoatCounter serves this endpoint
-    // with `Cache-Control: public` plus a multi-hour `Expires`, and the
-    // service worker already lets this request go straight to the network
-    // (see sw.js's isNetworkOnly()), but without this option the browser's
-    // own HTTP cache -- notably the long-lived one in iOS's WKWebView/PWA
-    // context -- could still hand back an hours-old response instead of a
-    // live count.
-    const response = await fetch(STATS_URL, {
+    // A cache-busting query param, not just cache: "no-store" -- iOS's
+    // standalone (Home Screen) PWA runtime has a known WebKit bug where
+    // no-store/no-cache fetch directives aren't reliably honored, even
+    // though the exact same request works fine in a regular Safari tab.
+    // Changing the URL itself sidesteps that: there's no cache key (local
+    // HTTP cache or any upstream/CDN cache in front of GoatCounter) that
+    // can match a previous response, regardless of which layer is or
+    // isn't respecting our cache headers. sw.js's isNetworkOnly() already
+    // keeps this request out of the service worker's Cache Storage
+    // entirely, so this only needs to defeat caches outside our control.
+    const bustedUrl = `${STATS_URL}?_=${Date.now()}`;
+    const response = await fetch(bustedUrl, {
       signal: controller.signal,
       cache: "no-store",
     });
