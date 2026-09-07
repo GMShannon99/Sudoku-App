@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "1.2.4";
-const HELP_LAST_UPDATED = "September 6, 2026";
+const APP_VERSION = "2.0.0";
+const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
 

@@ -81,7 +81,7 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. C
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v1.2.4").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v2.0.0").
 
 ### Analytics
 
