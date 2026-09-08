@@ -23,10 +23,17 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "4.0.3";
+const APP_VERSION = "4.0.4";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
-const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
+const ENTRY_HINT_TEXT = "Type in Sudoku digits to create a Puzzle.";
+
+// Below this many filled squares, Start Solving isn't shown at all (see
+// updateStartSolvingVisibility()) -- same threshold its click handler used
+// to enforce itself via a "Must enter more squares before starting." popup,
+// which no longer needs to exist now that the button simply isn't there to
+// click below this count.
+const MIN_SQUARES_TO_START_SOLVING = 6;
 
 // Caps how many backtracking guesses Paste Puzzle's validate-by-solving
 // check will spend on a pasted puzzle before giving up and treating it as
@@ -237,6 +244,8 @@ function computeReiterationCount(grid) {
 
 const entryGridEl = document.getElementById("entryGrid");
 const entryHintEl = document.getElementById("entryHint");
+const entryBoardFrameEl = document.getElementById("entryBoardFrame");
+const startSolvingBtnEl = document.getElementById("startSolvingBtn");
 let entryCells = null;
 
 function setEntryHint(text, kind) {
@@ -248,8 +257,33 @@ function clearEntryHint() {
   setEntryHint(ENTRY_HINT_TEXT, "");
 }
 
+// The home screen starts showing only the buttons in the side panel --
+// #entryBoardFrame (the grid plus its hint line) is hidden until "Manual
+// Entry" reveals it (see showEntryBoard()), or until Generate/Paste need
+// somewhere to show a status message (see their handlers below).
+function hideEntryBoard() {
+  entryBoardFrameEl.classList.add("hidden");
+}
+
+function showEntryBoard() {
+  entryBoardFrameEl.classList.remove("hidden");
+}
+
+// Start Solving simply isn't rendered below MIN_SQUARES_TO_START_SOLVING --
+// no popup, no disabled state, it's just not there to click yet. Called
+// after every entry-grid edit (onEntryCellInput, in both directions --
+// filling in a 6th square makes it appear, deleting back down to 5 makes
+// it disappear again) and after resetEntryGrid() clears the grid back to
+// empty.
+function updateStartSolvingVisibility() {
+  const grid = readGrid(entryCells);
+  const filledCount = grid.flat().filter((v) => v !== 0).length;
+  startSolvingBtnEl.classList.toggle("hidden", filledCount < MIN_SQUARES_TO_START_SOLVING);
+}
+
 function resetEntryGrid() {
   for (const key in entryCells) entryCells[key].value = "";
+  updateStartSolvingVisibility();
 }
 
 function onEntryCellInput(row, col, input) {
@@ -281,25 +315,23 @@ function onEntryCellInput(row, col, input) {
   }
 
   input.value = v;
+  updateStartSolvingVisibility();
 }
 
 function initEntryScreen() {
-  document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
+  document.getElementById("pageTitle").textContent = `Enter Your Sudoku Puzzle v${APP_VERSION}`;
   entryCells = buildGridDOM(entryGridEl, {
     editableAll: true,
     puzzleForGivens: null,
     onCellInput: onEntryCellInput,
   });
+  hideEntryBoard();
+  updateStartSolvingVisibility();
 }
 
 document.getElementById("startSolvingBtn").addEventListener("click", () => {
   clearEntryHint();
   const grid = readGrid(entryCells);
-  const filledCount = grid.flat().filter((v) => v !== 0).length;
-  if (filledCount <= 5) {
-    alert("Must enter more squares before starting.");
-    return;
-  }
   launchSolvingScreen(grid, computeReiterationCount(grid));
 });
 
@@ -310,12 +342,19 @@ document.getElementById("useSampleBtn").addEventListener("click", () => {
 });
 
 document.getElementById("createNewBtn").addEventListener("click", () => {
+  showEntryBoard();
   resetEntryGrid();
   clearEntryHint();
   document.getElementById("pageTitle").textContent = "Sudoku - Manual Enter Mode";
 });
 
 document.getElementById("generateBtn").addEventListener("click", async () => {
+  // setEntryHint() below writes into #entryHint, which lives inside
+  // #entryBoardFrame -- reveal it so "Generating puzzle..." is actually
+  // visible even if this is clicked straight from the buttons-only home
+  // screen (before Manual Entry has ever been pressed). Harmless either
+  // way: this always navigates to the solving screen right after.
+  showEntryBoard();
   clearEntryHint();
   const selected = document.querySelector('input[name="difficulty"]:checked');
   const targetDifficulty = selected ? selected.value : "Moderate";
@@ -347,6 +386,11 @@ document.getElementById("pasteBtn").addEventListener("click", async () => {
     return;
   }
 
+  // See generateBtn's handler above -- #entryHint needs the board frame
+  // visible to actually be seen, which matters here since a failed
+  // validation below (unlike a successful paste) leaves the user on this
+  // screen with that message as the only feedback.
+  showEntryBoard();
   setEntryHint("Validating pasted puzzle...", "");
   await paintNow();
 
@@ -606,11 +650,14 @@ function goToEntryScreen(instant = true) {
   moveHistory = [];
   redoStack = [];
 
-  document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
+  document.getElementById("pageTitle").textContent = `Enter Your Sudoku Puzzle v${APP_VERSION}`;
   difficultyLineEl.textContent = "";
   // Entry screen content is fully rebuilt now, while it's still
   // display:none -- ready before transitionScreens() below even starts a
-  // shatter, let alone by the time one finishes.
+  // shatter, let alone by the time one finishes. Back to the buttons-only
+  // home screen state, same as the very first page load -- Manual Entry
+  // reveals the board again from here, exactly like it did the first time.
+  hideEntryBoard();
   resetEntryGrid();
   clearEntryHint();
   clearIterationCount();

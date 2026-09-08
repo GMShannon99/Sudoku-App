@@ -17,13 +17,14 @@ This is a Progressive Web App (PWA) — it can be installed to a phone's home sc
 
 ### Puzzle entry screen
 
-When the app loads, you land on a blank entry grid where you can:
+When the app loads, you land on a home screen showing only its buttons — no grid yet. From here you can:
 
-- **Type a custom puzzle** — enter the starting clues by hand, then click **Start Solving** to lock them in as givens (at least 6 filled squares are required).
-- **Use Sample Puzzle** — jump straight to a built-in "world's hardest sudoku"-style puzzle (only 21 givens), ignoring anything you've typed.
-- **Paste Puzzle** — load a puzzle record from the system clipboard: a single line of 81 grid digits (0–9, row by row, 0 for blank), optionally followed by one extra character. This is the same record format written by the desktop Sudoku Solver's "Save to File" feature. Invalid clipboard contents or an unsolvable puzzle both show a clear error message instead of loading.
-- **Manual Entry** — clears the entry grid so you can start typing a fresh puzzle.
+- **Manual Entry** — reveals a blank entry grid so you can type a custom puzzle's starting clues by hand. A **Start Solving** button appears once at least 6 squares are filled in, letting you lock those clues in as givens and move to the solving screen; below 6, the button simply isn't shown, and it disappears again if you delete back down below that count. Clicking Manual Entry again at any point clears the grid back to blank.
+- **Use Sample Puzzle** — jump straight to a built-in "world's hardest sudoku"-style puzzle (only 21 givens), no need to reveal the grid at all.
+- **Paste Puzzle** — load a puzzle record from the system clipboard: a single line of 81 grid digits (0–9, row by row, 0 for blank), optionally followed by one extra character. This is the same record format written by the desktop Sudoku Solver's "Save to File" feature. Invalid clipboard contents or an unsolvable puzzle both show a clear error message instead of loading (revealing the grid if it wasn't already, purely so that message has somewhere to display).
 - **Generate Puzzle** — pick a difficulty (**Easy**, **Moderate**, or **Hard**) and generate a brand-new, randomly created puzzle guaranteed to have exactly one solution. If no difficulty is selected, it defaults to Moderate. A "Generating puzzle…" message appears while it works, since finding the right difficulty can take a few attempts internally.
+
+Returning to this screen later — e.g. via **New/Clear** — resets it back to the same buttons-only home screen state as the first page load.
 
 ### Input validation everywhere
 
@@ -85,7 +86,7 @@ Switching into the Special view (via **Special**) or back out of it (via **Retur
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.3").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Sudoku Puzzle v4.0.4").
 
 ## How to run it
 
@@ -112,6 +113,7 @@ npm test
 
 ## Version history
 
+- **v4.0.4** — The home screen now shows only its buttons on load (or whenever you return to it, e.g. via New/Clear) — no grid until "Manual Entry" reveals one. "Start Solving" only appears once at least 6 squares are filled in, disappearing again if you delete back below that count; the old "Must enter more squares before starting." popup is gone along with it, since there's no longer a way to click a button that isn't there. The entry screen's instructional text now reads "Type in Sudoku digits to create a Puzzle." and its title now reads "Enter Your Sudoku Puzzle."
 - **v4.0.3** — Replaced the Special/Return screen transition's shatter effect with a lighter-weight spiral-blur (the screen spins, shrinks, and blurs to nothing, no crash sound) — New/Clear keeps the original shatter. New/Clear's shatter now runs every time it's used (previously it was skipped when no guesses had been entered yet); in practice a puzzle is always showing whenever New/Clear is clickable, so this effectively means it always shatters now.
 - **v4.0.2** — Renamed the "Save" button to "Backup for Reset" (label only, same behavior) and moved it to sit immediately before Reset, since the two are a matched pair. New/Clear now shatters the whole solving screen apart first, the same effect the Special view's transitions use, but only when there's an actual user-entered guess on the board to discard — with nothing entered, it skips straight to the entry screen.
 - **v4.0.1** — Removed the Download JPG button (Print alone now covers printing/saving the puzzle image). Switching into or out of the Special view now shatters the whole screen apart first, the same effect the Prior/Next/Solve/View Puzzle Stats buttons already use, just scaled up to cover the entire board and controls. In the Special view, a previously-guessed cell (not a given clue) can now be clicked to clear it back to empty and immediately re-shows its candidates, instead of being locked like a given cell.

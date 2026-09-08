@@ -77,6 +77,15 @@
     min-height: 1em;
   }
 
+  /* Generic "not rendered at all" utility -- used for #entryBoardFrame
+     (hidden until Manual Entry reveals it, see showEntryBoard() in
+     sudoku-ui.js) and #startSolvingBtn (hidden below the 6-filled-square
+     threshold, see updateStartSolvingVisibility()). display:none rather
+     than visibility:hidden deliberately, so hidden elements take up no
+     layout space -- .entry-layout's own justify-content: center then
+     naturally re-centers whatever's left visible. */
+  .hidden { display: none; }
+
   .entry-layout {
     display: flex;
     align-items: flex-start;
@@ -768,17 +777,21 @@
 <body>
 
   <div class="heading">
-    <h1 id="pageTitle">Enter Your Puzzle</h1>
+    <h1 id="pageTitle">Enter Your Sudoku Puzzle</h1>
     <span class="credit">- By Gil Shannon</span>
   </div>
   <p class="difficulty-line" id="difficultyLine"></p>
 
   <!-- ===================== ENTRY SCREEN ===================== -->
+  <!-- #entryBoardFrame starts hidden (see the .hidden class added by
+       initEntryScreen() in sudoku-ui.js) -- the home screen shows only the
+       buttons in #entrySidePanel until "Manual Entry" reveals it (see
+       showEntryBoard()). -->
   <div class="screen active" id="entryScreen">
     <div class="entry-layout">
-      <div class="board-frame">
+      <div class="board-frame hidden" id="entryBoardFrame">
         <div class="board">
-          <p class="hint-text" id="entryHint">Type a digit into the squares you want filled.</p>
+          <p class="hint-text" id="entryHint">Type in Sudoku digits to create a Puzzle.</p>
           <div class="grid" id="entryGrid"></div>
         </div>
       </div>
@@ -892,26 +905,34 @@
         creates a contradiction), to finish.</p>
 
         <h2>Sudoku Web Functionality</h2>
-        <h3>Starting from a blank grid</h3>
-        <p>When the grid is blank &mdash; either the first time the page loads, or right
-        after clicking &ldquo;Manual Entry&rdquo; or &ldquo;New/Clear&rdquo; &mdash; you're on the puzzle
-        entry screen. Type a digit into every square you want as a starting clue and
-        leave every other square blank (no need to type 0 anywhere). Every digit you
-        type is checked against that cell's row, column, and 3x3 box &mdash; a digit
-        that's already used elsewhere in that row, column, or box is rejected with a
-        beep. Then either:</p>
+        <h3>Starting from the home screen</h3>
+        <p>The first time the page loads &mdash; or any time you're sent back here,
+        e.g. via &ldquo;New/Clear&rdquo; &mdash; you land on the puzzle entry screen
+        showing only its buttons; no grid is shown yet. From here you can:</p>
         <ul>
-          <li>Click &ldquo;Start Solving&rdquo; to lock in whatever you typed as the puzzle's
-          givens and move to the solving screen, or</li>
+          <li>Click &ldquo;Manual Entry&rdquo; to reveal a blank grid and start typing
+          your own puzzle's clues by hand &mdash; see &ldquo;Typing your own
+          puzzle&rdquo; below, or</li>
           <li>Click &ldquo;Use Sample Puzzle&rdquo; to skip straight to the built-in sample
-          puzzle instead, ignoring anything you typed, or</li>
+          puzzle instead, or</li>
           <li>Click &ldquo;Paste Puzzle&rdquo; to load a puzzle record off the system
           clipboard &mdash; see &ldquo;Pasting a saved puzzle&rdquo; below, or</li>
           <li>Pick a difficulty (Easy, Moderate, or Hard) and click &ldquo;Generate
-          Puzzle&rdquo; to create a brand new puzzle instead of typing or pasting one, or</li>
-          <li>Click &ldquo;Manual Entry&rdquo; to clear every square on this entry screen and
-          start manually typing a brand new puzzle.</li>
+          Puzzle&rdquo; to create a brand new puzzle instead of typing or pasting one.</li>
         </ul>
+
+        <h3>Typing your own puzzle</h3>
+        <p>Once &ldquo;Manual Entry&rdquo; reveals the grid, type a digit into every
+        square you want as a starting clue and leave every other square blank (no
+        need to type 0 anywhere). Every digit you type is checked against that
+        cell's row, column, and 3x3 box &mdash; a digit that's already used
+        elsewhere in that row, column, or box is rejected with a beep. Once you've
+        typed at least 6 clues, a &ldquo;Start Solving&rdquo; button appears &mdash;
+        click it to lock in whatever you typed as the puzzle's givens and move to
+        the solving screen. Below 6 clues, the button simply isn't there yet;
+        typing a 6th brings it back, and deleting back down below 6 hides it
+        again. Clicking &ldquo;Manual Entry&rdquo; again at any point clears every
+        square so you can start over.</p>
 
         <h3>Generating a new puzzle</h3>
         <p>Next to &ldquo;Use Sample Puzzle,&rdquo; a set of difficulty radio buttons (Easy,
