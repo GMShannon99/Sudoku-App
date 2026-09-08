@@ -81,11 +81,11 @@ A **Special** button on the solving screen switches to a magnified, one-3×3-box
 
 **Next** and **Prior** step through the puzzle's nine boxes in reading order (left to right, top to bottom); **Prior** disappears (via the same shatter effect described above, played in reverse) on the first box, and **Next** disappears the same way on the last box, each reappearing the moment you're no longer at that end. **Help** opens a Special-view-specific help document, wholly separate from the main puzzle's own Help. **Return** goes back to the main puzzle screen with anything you picked already applied.
 
-Switching into the Special view (via **Special**) or back out of it (via **Return**) shatters the entire screen you're leaving apart — the same jagged-glass effect and crash sound as the button shatter above, just scaled up to cover the whole board and controls — before the other screen appears. Purely a transition effect: the destination screen is already fully built before the shatter even starts, so nothing is still loading once it appears. Skipped (an instant swap instead) under reduced motion, same as everywhere else this effect is used.
+Switching into the Special view (via **Special**) or back out of it (via **Return**) spins the entire screen you're leaving into a shrinking, blurring spiral before the other screen appears — a different, lighter-weight effect from the button/New-Clear shatter above, with no crash sound. Purely a transition effect: the destination screen is already fully built before the spiral starts, so nothing is still loading once it appears — it just appears instantly, rather than spiraling back into focus. Skipped (an instant swap instead) under reduced motion, same as everywhere else an animation is used.
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.2").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.3").
 
 ## How to run it
 
@@ -112,6 +112,7 @@ npm test
 
 ## Version history
 
+- **v4.0.3** — Replaced the Special/Return screen transition's shatter effect with a lighter-weight spiral-blur (the screen spins, shrinks, and blurs to nothing, no crash sound) — New/Clear keeps the original shatter. New/Clear's shatter now runs every time it's used (previously it was skipped when no guesses had been entered yet); in practice a puzzle is always showing whenever New/Clear is clickable, so this effectively means it always shatters now.
 - **v4.0.2** — Renamed the "Save" button to "Backup for Reset" (label only, same behavior) and moved it to sit immediately before Reset, since the two are a matched pair. New/Clear now shatters the whole solving screen apart first, the same effect the Special view's transitions use, but only when there's an actual user-entered guess on the board to discard — with nothing entered, it skips straight to the entry screen.
 - **v4.0.1** — Removed the Download JPG button (Print alone now covers printing/saving the puzzle image). Switching into or out of the Special view now shatters the whole screen apart first, the same effect the Prior/Next/Solve/View Puzzle Stats buttons already use, just scaled up to cover the entire board and controls. In the Special view, a previously-guessed cell (not a given clue) can now be clicked to clear it back to empty and immediately re-shows its candidates, instead of being locked like a given cell.
 - **v4.0.0** — Added the Special view: a new "Special" button on the solving screen switches to a magnified, one-3×3-box-at-a-time editor of the same puzzle (no separate copy of it), with its own Next/Prior/Return/Help controls and its own, separate Help document. Purely additive — no changes to puzzle-solving/generation/validation logic, and no changes to the main puzzle screen's own behavior or Help content beyond the version number line.

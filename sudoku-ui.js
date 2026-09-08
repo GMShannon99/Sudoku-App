@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "4.0.2";
+const APP_VERSION = "4.0.3";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -1281,26 +1281,6 @@ document.getElementById("resetBtn").addEventListener("click", () => {
   updateCandidateLabels();
 });
 
-// Whether the solving screen currently shows any user-entered guess (a
-// non-given cell with a value) -- the board's own visible content, not
-// backupStack (a separate, already-acknowledged-in-the-confirm-dialog
-// concept). Given cells are always present here (Start Solving requires at
-// least 6 filled squares, so a truly blank-including-givens grid can never
-// reach this screen) -- guesses are therefore the only meaningful signal
-// that there's something on the board worth dramatically shattering away;
-// with none, New/Clear's own confirm dialog already established the user's
-// intent, so the plain instant swap is enough. Checked directly against the
-// live cell values rather than moveHistory.length, since moveHistory isn't
-// touched by clearing a guess via the Special view (see clearSpecialGuess())
-// -- a cell cleared that way would make this correctly report "no guesses"
-// even though moveHistory still has a stale entry for it.
-function solvingBoardHasGuesses() {
-  for (const key in solvingCells) {
-    if (!givenCells.has(key) && solvingCells[key].value !== "") return true;
-  }
-  return false;
-}
-
 document.getElementById("newClearBtn").addEventListener("click", () => {
   clearIterationCount();
   const confirmed = window.confirm(
@@ -1308,7 +1288,16 @@ document.getElementById("newClearBtn").addEventListener("click", () => {
     "sure you want to continue?"
   );
   if (!confirmed) return;
-  goToEntryScreen(!solvingBoardHasGuesses());
+  // Shatters unless the screen is genuinely blank (no puzzle loaded at
+  // all) -- puzzle is only ever null before a puzzle has been loaded onto
+  // this screen (see goToEntryScreen() itself, which sets it back to null,
+  // and launchSolvingScreen(), the only place that sets it to a real grid).
+  // In practice this screen never IS blank when New/Clear is clickable
+  // (Start Solving requires 6+ filled squares, Generate/Sample/Paste all
+  // load a real puzzle too) -- so this shatters every time New/Clear
+  // actually runs; the null check exists to state the intended rule
+  // precisely rather than hardcode "always animate".
+  goToEntryScreen(puzzle === null);
 });
 
 /* ===================== UNDO (CTRL+Z) ===================== */
@@ -1449,6 +1438,56 @@ function transitionScreens(fromEl, toEl, { instant = false } = {}) {
   }
 }
 
+// A wholly different, much lighter-weight effect from shatterScreen()
+// above -- no cloning, no shards, just a single CSS animation (see
+// .spiral-blur-out/@keyframes spiralBlurOut in index.html) applied
+// directly to the real screen element being left: it spins, shrinks, and
+// blurs to nothing over one animation, then onComplete fires. Used only
+// for the Special <-> solving-screen transitions (see
+// spiralBlurTransition() below) -- New/Clear keeps the shatter effect via
+// transitionScreens()/shatterScreen() above, unchanged.
+function spiralBlurScreen(screenEl, onComplete) {
+  screenEl.classList.add("spiral-blur-out");
+  screenEl.addEventListener(
+    "animationend",
+    () => {
+      screenEl.classList.remove("spiral-blur-out");
+      onComplete();
+    },
+    { once: true }
+  );
+}
+
+// Swaps fromEl/toEl via the spiral-blur effect above, unless reduced motion
+// is on, in which case the swap happens instantly -- same fallback
+// transitionScreens() uses. toEl's own content must already be fully up to
+// date BEFORE this runs, same requirement as transitionScreens() (see
+// goToSpecialScreen()/returnFromSpecialScreen()). Shares
+// screenTransitionActive with transitionScreens() -- only one of
+// New/Clear's shatter or a Special/Return spiral-blur can ever be running
+// at a time, since only one of these three screens can be transitioning at
+// once. The incoming screen simply appears the instant the outgoing one
+// finishes blurring away, rather than spiraling back into focus -- matching
+// how every other screen swap in this app already works (no reverse
+// animation on the way in), and avoiding a "spin-in" that would look odd
+// applied to a completely different screen's content.
+function spiralBlurTransition(fromEl, toEl) {
+  if (screenTransitionActive) return;
+
+  const swap = () => {
+    fromEl.classList.remove("active");
+    toEl.classList.add("active");
+    screenTransitionActive = false;
+  };
+
+  if (prefersReducedMotion.matches) {
+    swap();
+  } else {
+    screenTransitionActive = true;
+    spiralBlurScreen(fromEl, swap);
+  }
+}
+
 const specialScreenEl = document.getElementById("specialScreen");
 const specialGridEl = document.getElementById("specialGrid");
 const specialBoxLabelEl = document.getElementById("specialBoxLabel");
@@ -1495,10 +1534,10 @@ function goToSpecialScreen() {
   specialPriorHidden = null;
   specialNextHidden = null;
   // Builds the magnified box's DOM now, while specialScreen is still
-  // display:none -- it's fully ready before the shatter transition even
-  // starts, let alone by the time it finishes (see transitionScreens()).
+  // display:none -- it's fully ready before the spiral-blur transition even
+  // starts, let alone by the time it finishes (see spiralBlurTransition()).
   renderSpecialBox();
-  transitionScreens(document.getElementById("solvingScreen"), specialScreenEl);
+  spiralBlurTransition(document.getElementById("solvingScreen"), specialScreenEl);
 }
 
 function returnFromSpecialScreen() {
@@ -1510,7 +1549,7 @@ function returnFromSpecialScreen() {
   // again (maybeAutoSolve() itself was already run at the moment each
   // digit was placed, not deferred to here -- see fillSpecialCellWithDigit()).
   updateCandidateLabels();
-  transitionScreens(specialScreenEl, document.getElementById("solvingScreen"));
+  spiralBlurTransition(specialScreenEl, document.getElementById("solvingScreen"));
 }
 
 // Builds one magnified filled-cell tile: an <input class="cell"> mirroring

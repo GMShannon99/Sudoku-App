@@ -520,6 +520,27 @@
     }
   }
 
+  /* Wholly separate effect from .shatter-shard/shatterFall above -- no
+     shards, no cloning, just this one animation applied directly to the
+     real screen element being left (see spiralBlurScreen() in
+     sudoku-ui.js). Used only for the Special <-> solving-screen
+     transitions; New/Clear keeps the shatter effect. Same accelerating
+     cubic-bezier timing as shatterFall for a consistent feel, just a
+     single continuous spin/shrink/blur instead of many falling pieces. */
+  .screen.spiral-blur-out {
+    animation: spiralBlurOut 650ms cubic-bezier(0.5, 0, 1, 1) forwards;
+    transform-origin: center center;
+    pointer-events: none;
+  }
+
+  @keyframes spiralBlurOut {
+    to {
+      transform: rotate(360deg) scale(0.05);
+      filter: blur(20px);
+      opacity: 0;
+    }
+  }
+
   /* ===================== SPECIAL VIEW ===================== */
   /* Magnified single-3x3-box editor (see goToSpecialScreen() etc. in
      sudoku-ui.js) -- reuses .board-frame/.board for the same dark-wood/
@@ -965,11 +986,9 @@
           <li><strong>Help</strong> &mdash; Opens this help window.</li>
           <li><strong>New/Clear</strong> &mdash; After asking you to confirm, discards the
           current puzzle and every saved backup and takes you back to the blank
-          puzzle entry screen, so you can start over with a brand new puzzle. If
-          you'd filled in anything yourself, the whole solving screen shatters
-          apart first, the same effect described above, just covering the whole
-          screen instead of one button; if the puzzle is exactly as it was
-          loaded, it skips straight to the entry screen instead.</li>
+          puzzle entry screen, so you can start over with a brand new puzzle. The
+          whole solving screen shatters apart first, the same effect described
+          above, just covering the whole screen instead of one button.</li>
         </ul>
 
         <h3>Undo (Ctrl+Z)</h3>
