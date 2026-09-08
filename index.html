@@ -790,11 +790,11 @@
       </div>
     </div>
     <div class="controls">
-      <button id="saveBtn">Save</button>
+      <button id="saveBtn">Backup for Reset</button>
+      <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="writeToFileBtn" title="Each save creates a new file in your browser's default downloads folder.">Write to File</button>
       <button class="secondary" id="printBtn" title="Opens your browser's print dialog with a printable image of the current puzzle.">Print</button>
       <button id="solveBtn">Solve</button>
-      <button class="secondary" id="resetBtn">Reset</button>
       <button class="secondary" id="specialBtn" title="Magnifies one 3x3 box at a time for easier candidate picking.">Special</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
       <button class="secondary" id="newClearBtn">New/Clear</button>
@@ -935,10 +935,10 @@
 
         <h3>The buttons on the solving screen</h3>
         <ul>
-          <li><strong>Save</strong> &mdash; Takes a snapshot backup of the grid exactly as it
-          looks right now (givens plus whatever you've typed in so far). Each Save
-          adds another backup. This is an in-memory backup only &mdash; it's lost when
-          the page is closed or reloaded.</li>
+          <li><strong>Backup for Reset</strong> &mdash; Takes a snapshot backup of the grid
+          exactly as it looks right now (givens plus whatever you've typed in so far).
+          Each click adds another backup. This is an in-memory backup only &mdash; it's
+          lost when the page is closed or reloaded.</li>
           <li><strong>Solve</strong> &mdash; Runs the full solver and fills in every remaining
           empty cell to complete the puzzle. The same thing happens automatically if
           you fill in the last empty square yourself. Either way, every square you
@@ -960,8 +960,8 @@
           other app's print button would open. If the current entries have no valid
           solution at all, a popup explains this instead, and nothing is generated.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
-          never clicked Save, this instead clears the grid back to the original
-          puzzle's clues.</li>
+          never clicked Backup for Reset, this instead clears the grid back to the
+          original puzzle's clues.</li>
           <li><strong>Help</strong> &mdash; Opens this help window.</li>
           <li><strong>New/Clear</strong> &mdash; After asking you to confirm, discards the
           current puzzle and every saved backup and takes you back to the blank

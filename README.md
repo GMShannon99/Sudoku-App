@@ -37,14 +37,14 @@ Clicking an empty square on the solving screen highlights it in yellow and shows
 
 The numbers to the right of each row and below each column show every digit still missing from that row or column, updating live as you fill in cells. Once a row or column is completely and correctly filled, its label switches to a checkmark (✓).
 
-### Save / Reset backups
+### Backup for Reset / Reset
 
-- **Save** takes an in-memory snapshot of the grid exactly as it stands (givens plus everything you've typed so far). Each click adds another backup, and a running count ("N screen backups") is displayed.
+- **Backup for Reset** takes an in-memory snapshot of the grid exactly as it stands (givens plus everything you've typed so far). Each click adds another backup, and a running count ("N screen backups") is displayed.
 - **Reset** restores the most recently saved backup, or — if nothing has been saved yet — clears the grid back to the puzzle's original clues.
 
 ### Undo / Redo (Ctrl+Z / Ctrl+Shift+Z)
 
-On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — whether the digit was typed directly or filled in by clicking a candidate button — clearing that square and updating the row/column candidate labels. Repeated presses step back through your moves one at a time, most recent first. If a move is undone after the puzzle has auto-solved, the affected square becomes editable again instead of staying locked and blue. **Ctrl+Shift+Z** (or Cmd+Shift+Z) redoes the most recently undone move, putting its digit back. Making a new move after undoing clears anything left to redo. This history is separate from the Save/Reset backups above: starting a new puzzle or clicking Reset both clear it, since either one establishes a fresh starting point.
+On the solving screen, **Ctrl+Z** (or Cmd+Z) undoes your most recent move — whether the digit was typed directly or filled in by clicking a candidate button — clearing that square and updating the row/column candidate labels. Repeated presses step back through your moves one at a time, most recent first. If a move is undone after the puzzle has auto-solved, the affected square becomes editable again instead of staying locked and blue. **Ctrl+Shift+Z** (or Cmd+Shift+Z) redoes the most recently undone move, putting its digit back. Making a new move after undoing clears anything left to redo. This history is separate from the Backup for Reset/Reset backups above: starting a new puzzle or clicking Reset both clear it, since either one establishes a fresh starting point.
 
 ### Solving
 

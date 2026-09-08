@@ -82,7 +82,7 @@ let backupStack = [];
 // Every digit the user has entered on the solving screen (typed or via a
 // candidate button), in order, so Ctrl+Z can undo them one at a time --
 // separate from backupStack, which only restores whole-grid snapshots taken
-// by clicking Save.
+// by clicking Backup for Reset.
 let moveHistory = [];
 
 // Moves popped off moveHistory by Ctrl+Z, so Ctrl+Shift+Z can restore them.
