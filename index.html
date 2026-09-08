@@ -27,6 +27,29 @@
     --success: #3e7c59;
     --hint: #8a7a5c;
     --locked-fill: #e2d5b8;
+
+    /* Shared "tactile button" look, reused by every button variant below
+       (the generic button rule, .secondary, and the two candidate-button
+       variants) so the raised/pressed physics stay identical everywhere
+       even though each variant still supplies its own fill color. --btn-face
+       is a color-agnostic sheen (light fading to a faint shadow) layered on
+       top of a variant's own background via the multi-background trick
+       (`background: var(--btn-face), <color>;`); --btn-raised/--btn-pressed
+       are the two box-shadow states a "physical button" toggles between --
+       raised at rest (a solid dark edge to fake the button's own thickness,
+       a soft blurred drop shadow for how far it sits off the surface below
+       it, and inset top/bottom lines for a lit top edge and a shaded
+       underside), pressed on :active (the edge shadow all but disappears
+       and an inset shadow reads as the face pushing inward). */
+    --btn-face: linear-gradient(to bottom, rgba(255,255,255,0.16), rgba(255,255,255,0) 45%, rgba(0,0,0,0.1));
+    --btn-raised:
+      0 2px 0 rgba(0,0,0,0.5),
+      0 4px 7px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.22),
+      inset 0 -1px 1px rgba(0,0,0,0.2);
+    --btn-pressed:
+      0 1px 0 rgba(0,0,0,0.4),
+      inset 0 2px 4px rgba(0,0,0,0.35);
   }
 
   * { box-sizing: border-box; }
@@ -239,24 +262,37 @@
     font-size: 0.85rem;
     font-weight: 500;
     padding: 9px 18px;
-    border-radius: 5px;
+    border-radius: 8px;
     border: 1px solid var(--line);
-    background: var(--ink);
+    background: var(--btn-face), var(--ink);
+    box-shadow: var(--btn-raised);
     color: var(--board-bg);
     cursor: pointer;
-    transition: transform 0.08s ease, background 0.15s ease;
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.08s ease, filter 0.08s ease;
   }
 
-  button:hover { background: #3a2c1f; }
-  button:active { transform: scale(0.97); }
+  button:hover { background: var(--btn-face), #3a2c1f; }
+
+  /* The "pressed" state every button variant shares: the raised drop
+     shadow collapses toward flat, an inset shadow reads as the face
+     dipping inward, a small downward translate sells the actual travel,
+     and a slight darken (filter, so it layers over any --btn-face/color
+     combination without needing its own per-variant override) completes
+     the "physically depressed" look -- exactly the same four changes
+     regardless of which button this is. */
+  button:active {
+    transform: translateY(2px) scale(0.98);
+    box-shadow: var(--btn-pressed);
+    filter: brightness(0.92);
+  }
 
   button.secondary {
-    background: transparent;
+    background: var(--btn-face), transparent;
     color: var(--board-bg);
     border-color: var(--line-soft);
   }
 
-  button.secondary:hover { background: rgba(242,232,213,0.1); }
+  button.secondary:hover { background: var(--btn-face), rgba(242,232,213,0.1); }
 
   .difficulty-picker {
     display: flex;
@@ -336,17 +372,19 @@
     padding: 0;
     min-width: 0;
     min-height: 0;
-    background: #fff59d;
+    background: var(--btn-face), #fff59d;
+    box-shadow: var(--btn-raised);
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: 6px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     font-weight: 600;
     color: var(--ink);
     cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.08s ease, filter 0.08s ease;
   }
 
-  .candidate-btn:hover { background: #fff176; }
+  .candidate-btn:hover { background: var(--btn-face), #fff176; }
 
   .iteration-line {
     font-style: italic;
@@ -491,6 +529,12 @@
     margin: 0;
     pointer-events: none;
     z-index: 20;
+    /* Each shard is a clip-path sliver of a real button clone, which would
+       otherwise still carry that button's raised-bezel box-shadow (see
+       --btn-raised) -- a shadow reads as a rectangular bezel, not a jagged
+       broken-glass edge, so it has to be stripped here for the shards to
+       still look like clean solid chunks breaking off. */
+    box-shadow: none;
     animation-name: shatterFall;
     animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
     animation-fill-mode: forwards;
@@ -634,16 +678,18 @@
     height: 100%;
     padding: 0;
     border: 1px solid var(--line);
-    border-radius: 3px;
-    background: #fff59d;
+    border-radius: 6px;
+    background: var(--btn-face), #fff59d;
+    box-shadow: var(--btn-raised);
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.3rem;
     font-weight: 600;
     color: var(--ink);
     cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.08s ease, filter 0.08s ease;
   }
 
-  button.special-candidate-btn:hover { background: #fff176; }
+  button.special-candidate-btn:hover { background: var(--btn-face), #fff176; }
 
   /* Same #fff59d as input.cell.selected on the main board -- can't reuse
      that selector directly since this is a <div>, not an <input>, but the
