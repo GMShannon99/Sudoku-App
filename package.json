@@ -1,6 +1,6 @@
 {
   "name": "sudoku-web",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "A browser-based Sudoku puzzle entry and solving tool.",
   "private": true,
   "scripts": {

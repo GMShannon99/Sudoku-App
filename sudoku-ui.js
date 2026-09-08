@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "3.0.0";
+const APP_VERSION = "4.0.0";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -432,6 +432,12 @@ function buildShatterBoundaries(shardCount) {
 // needed here.
 function shatterButton(btnEl) {
   shatterSound();
+  // Invalidates any reassembleButton() completion still pending for this
+  // button (see there) -- otherwise a rapid shatter -> reassemble ->
+  // shatter sequence (possible in the Special view: Next/Prior can toggle
+  // faster than one animation cycle) could let a stale reassemble callback
+  // reveal the button again right after this call just re-hid it.
+  btnEl._shatterToken = null;
 
   const rect = btnEl.getBoundingClientRect();
   const shardCount = randomInt(5, 8);
@@ -480,6 +486,60 @@ function resetButtonShatter(btnEl) {
     .querySelectorAll(`.shatter-shard[data-shatter-owner="${btnEl.id}"]`)
     .forEach((shard) => shard.remove());
   btnEl.style.visibility = "";
+}
+
+// Reverse of shatterButton() above -- used when the Special view's Prior/
+// Next buttons come back after being shattered away for being at the
+// first/last box (see updateSpecialNavButtons()). Builds the same jagged
+// shard clones and reuses buildShatterBoundaries() for their shapes, but
+// starts each one already displaced (below the viewport, drifted and
+// rotated -- the same --shard-dx/dy/rot ranges shatterButton()'s shards
+// land at) and animates it INTO the button's real resting position via
+// the .shatter-shard-assemble/@keyframes shatterAssemble CSS (see
+// index.html), revealing the real button the instant the last shard
+// finishes. No sound -- shatterSound() is a crash/break noise that
+// wouldn't make sense playing in reverse.
+function reassembleButton(btnEl) {
+  const rect = btnEl.getBoundingClientRect();
+  const shardCount = randomInt(5, 8);
+  const { top, bottom } = buildShatterBoundaries(shardCount);
+
+  // Identifies this specific reassembly -- if a newer shatterButton() or
+  // reassembleButton() call supersedes it before all shards finish, this
+  // token no longer matches btnEl._shatterToken and the stale completion
+  // below skips revealing the button (see shatterButton()'s own comment).
+  const token = {};
+  btnEl._shatterToken = token;
+
+  btnEl.style.visibility = "hidden";
+  let remaining = shardCount;
+
+  for (let i = 0; i < shardCount; i++) {
+    const shard = btnEl.cloneNode(true);
+    shard.removeAttribute("id");
+    shard.tabIndex = -1;
+    shard.classList.add("shatter-shard", "shatter-shard-assemble");
+    shard.dataset.shatterOwner = btnEl.id;
+    shard.style.visibility = "visible";
+    shard.style.left = `${rect.left}px`;
+    shard.style.top = `${rect.top}px`;
+    shard.style.width = `${rect.width}px`;
+    shard.style.height = `${rect.height}px`;
+    shard.style.background = "var(--ink)";
+    shard.style.clipPath =
+      `polygon(${top[i]}% 0%, ${top[i + 1]}% 0%, ${bottom[i + 1]}% 100%, ${bottom[i]}% 100%)`;
+    shard.style.setProperty("--shard-dx", `${randomInt(-50, 50)}px`);
+    shard.style.setProperty("--shard-dy", `${Math.round(window.innerHeight - rect.top + 120)}px`);
+    shard.style.setProperty("--shard-rot", `${randomInt(-140, 140)}deg`);
+    shard.style.animationDuration = `${randomInt(500, 850)}ms`;
+    shard.style.animationDelay = `${randomInt(0, 60)}ms`;
+    shard.addEventListener("animationend", () => {
+      shard.remove();
+      remaining -= 1;
+      if (remaining === 0 && btnEl._shatterToken === token) resetButtonShatter(btnEl);
+    });
+    document.body.append(shard);
+  }
 }
 
 /* ===================== SOLVING SCREEN ===================== */
@@ -865,10 +925,18 @@ function showSolvedHighlight() {
     }
   }
   solvedHighlightActive = true;
-  if (prefersReducedMotion.matches) {
+  // Auto-solve can now also complete from the Special view (see
+  // fillSpecialCellWithDigit()), where the main solving screen -- and so
+  // solveBtnEl itself -- isn't on screen. shatterButton() measures the
+  // button's real on-screen rect via getBoundingClientRect(), which is
+  // zero-sized for anything inside a display:none ancestor, so shattering
+  // it there would produce a broken, invisible effect -- skip straight to
+  // the same instant-hide fallback reduced-motion already uses.
+  const solveBtnVisible = document.getElementById("solvingScreen").classList.contains("active");
+  if (prefersReducedMotion.matches || !solveBtnVisible) {
     // The blank space Solve leaves behind is a real state change, not just
-    // a cosmetic flourish -- still applies under reduced motion, just
-    // without the falling-shards animation.
+    // a cosmetic flourish -- still applies here, just without the
+    // falling-shards animation.
     solveBtnEl.style.visibility = "hidden";
   } else {
     shatterButton(solveBtnEl);
@@ -1278,6 +1346,231 @@ function redoLastMove() {
   maybeAutoSolve();
 }
 
+/* ===================== SPECIAL VIEW ===================== */
+// Magnifies one of the puzzle's nine standard 3x3 boxes at a time. Reads
+// from and writes straight into the same solvingCells inputs the main
+// solving screen uses -- never a separate copy of the puzzle -- via the
+// same computeValidCandidates()/recordMove()/updateCandidateLabels()/
+// maybeAutoSolve() the main board's own candidate buttons already rely on.
+
+const specialScreenEl = document.getElementById("specialScreen");
+const specialGridEl = document.getElementById("specialGrid");
+const specialBoxLabelEl = document.getElementById("specialBoxLabel");
+const specialPriorBtnEl = document.getElementById("specialPriorBtn");
+const specialNextBtnEl = document.getElementById("specialNextBtn");
+
+// Which of the 9 standard 3x3 boxes (0-8, same numbering as
+// SudokuLogic.boxIndex -- reading order, top-left first) the Special view
+// is currently showing.
+let specialBoxIndex = 0;
+
+// The "row,col" key of the currently selected empty cell within the
+// magnified box, or null. Separate from the main grid's selectedCell since
+// this is a different screen's DOM, but the same one-at-a-time invariant.
+let specialSelectedCell = null;
+
+// Whether the Prior/Next buttons are each currently shattered away --
+// tracked so shatterButton()/reassembleButton() only ever fire on an
+// actual transition into or out of the first/last box, never redundantly
+// on every render. null means "not yet set up for this visit to the
+// Special view" (see goToSpecialScreen()), which sets up the initial state
+// silently, exactly like the Solve button never animates on page load.
+let specialPriorHidden = null;
+let specialNextHidden = null;
+
+// The 9 [row, col] pairs inside box b (0-8), in reading order (left to
+// right, top to bottom) -- the inverse of SudokuLogic.boxIndex's own
+// row/col -> box mapping.
+function cellsInBox(box) {
+  const startRow = Math.floor(box / 3) * 3;
+  const startCol = (box % 3) * 3;
+  const cells = [];
+  for (let r = startRow; r < startRow + 3; r++) {
+    for (let c = startCol; c < startCol + 3; c++) {
+      cells.push([r, c]);
+    }
+  }
+  return cells;
+}
+
+function goToSpecialScreen() {
+  clearSelection();
+  specialBoxIndex = 0;
+  specialPriorHidden = null;
+  specialNextHidden = null;
+  document.getElementById("solvingScreen").classList.remove("active");
+  specialScreenEl.classList.add("active");
+  renderSpecialBox();
+}
+
+function returnFromSpecialScreen() {
+  specialSelectedCell = null;
+  specialScreenEl.classList.remove("active");
+  document.getElementById("solvingScreen").classList.add("active");
+  // Cells may have been filled while in the Special view -- refresh the
+  // main board's row/column-missing labels, exactly as its own input
+  // handlers already do after every guess (maybeAutoSolve() itself was
+  // already run at the moment each digit was placed, not deferred to
+  // here -- see fillSpecialCellWithDigit()).
+  updateCandidateLabels();
+}
+
+// Builds one magnified filled-cell tile: a disabled <input class="cell">
+// mirroring solvingCells[key]'s current value/given/solved-highlight
+// styling exactly -- copying its classList/inline color rather than
+// recomputing any of it -- so a filled cell here looks pixel-identical to
+// the same cell on the main board, just bigger (see input.cell.special-cell
+// in index.html).
+function buildFilledSpecialTile(row, col) {
+  const source = solvingCells[`${row},${col}`];
+  const tile = document.createElement("input");
+  tile.className = "cell special-cell";
+  tile.disabled = true;
+  tile.value = source.value;
+  if (source.classList.contains("given")) tile.classList.add("given");
+  if (source.classList.contains("solved-highlight")) tile.classList.add("solved-highlight");
+  tile.style.color = source.style.color;
+  return tile;
+}
+
+// Builds one magnified empty-cell tile: a 3x3 mini-grid of this cell's
+// currently valid candidates, laid out at the same digit-to-position
+// mapping renderPrintCanvas() uses for its own per-cell candidate
+// mini-grid (digit d at mini-row floor((d-1)/3), mini-col (d-1)%3) --
+// reusing both that layout convention and computeValidCandidates(), the
+// same source of truth the main board's candidate buttons and the print
+// feature both already rely on. Not yet selected: every valid digit is a
+// plain, non-interactive label -- clicking the tile itself (not a digit)
+// is what selects it (see selectSpecialCell()), which is when these turn
+// into real clickable buttons.
+function buildEmptySpecialTile(row, col) {
+  const tile = document.createElement("div");
+  tile.className = "special-cell-empty";
+
+  const candidates = new Set(computeValidCandidates(row, col));
+  const miniGrid = document.createElement("div");
+  miniGrid.className = "special-candidate-grid";
+  const slots = [];
+  for (let digit = 1; digit <= 9; digit++) {
+    const slot = document.createElement("span");
+    slot.className = "special-candidate";
+    if (candidates.has(digit)) slot.textContent = String(digit);
+    miniGrid.appendChild(slot);
+    slots.push(slot);
+  }
+  tile.appendChild(miniGrid);
+
+  tile.addEventListener("click", () => selectSpecialCell(row, col, tile, slots, candidates));
+  return tile;
+}
+
+// Selects one empty tile: highlights it yellow (the same #fff59d as the
+// main board's .selected cells) and turns its candidate labels into
+// clickable buttons that commit the chosen digit. Re-clicking the
+// already-selected tile is a no-op, matching selectSolvingCell()'s own
+// invariant on the main board.
+function selectSpecialCell(row, col, tile, slots, candidates) {
+  const key = `${row},${col}`;
+  if (specialSelectedCell === key) return;
+  specialSelectedCell = key;
+
+  tile.classList.add("selected");
+  for (const slot of slots) {
+    const digit = Number(slot.textContent);
+    if (!candidates.has(digit)) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "special-candidate special-candidate-btn";
+    btn.textContent = slot.textContent;
+    btn.addEventListener("click", () => fillSpecialCellWithDigit(row, col, digit));
+    slot.replaceWith(btn);
+  }
+}
+
+// Commits digit into (row, col) -- the exact same shared solvingCells
+// state the main board reads/writes, not a separate copy -- then
+// re-renders the current box so the just-filled cell immediately shows as
+// filled. Reuses recordMove() (for Ctrl+Z, once back on the main screen),
+// updateCandidateLabels(), and maybeAutoSolve() exactly as
+// fillSelectedCellWithDigit() does for the main board's own candidate
+// buttons -- candidates shown here are already guaranteed legal
+// (computeValidCandidates() only ever lists legal options), so there's
+// nothing new to validate.
+function fillSpecialCellWithDigit(row, col, digit) {
+  solvingCells[`${row},${col}`].value = String(digit);
+  recordMove(row, col, digit);
+  updateCandidateLabels();
+  maybeAutoSolve();
+  renderSpecialBox();
+}
+
+// Rebuilds the magnified 3x3 grid for specialBoxIndex from the shared
+// solvingCells state and clears any prior selection, exactly like
+// buildSolvingGrid() does for the main board.
+function renderSpecialBox() {
+  specialSelectedCell = null;
+  specialGridEl.innerHTML = "";
+  specialBoxLabelEl.textContent = `Box ${specialBoxIndex + 1} of 9`;
+
+  for (const [row, col] of cellsInBox(specialBoxIndex)) {
+    const hasValue = solvingCells[`${row},${col}`].value !== "";
+    specialGridEl.appendChild(
+      hasValue ? buildFilledSpecialTile(row, col) : buildEmptySpecialTile(row, col)
+    );
+  }
+
+  updateSpecialNavButtons();
+}
+
+function updateSpecialNavButtons() {
+  const atFirst = specialBoxIndex === 0;
+  const atLast = specialBoxIndex === 8;
+
+  if (specialPriorHidden === null) {
+    specialPriorHidden = atFirst;
+    if (atFirst) specialPriorBtnEl.style.visibility = "hidden";
+  } else if (atFirst !== specialPriorHidden) {
+    specialPriorHidden = atFirst;
+    if (prefersReducedMotion.matches) {
+      specialPriorBtnEl.style.visibility = atFirst ? "hidden" : "";
+    } else if (atFirst) {
+      shatterButton(specialPriorBtnEl);
+    } else {
+      reassembleButton(specialPriorBtnEl);
+    }
+  }
+
+  if (specialNextHidden === null) {
+    specialNextHidden = atLast;
+    if (atLast) specialNextBtnEl.style.visibility = "hidden";
+  } else if (atLast !== specialNextHidden) {
+    specialNextHidden = atLast;
+    if (prefersReducedMotion.matches) {
+      specialNextBtnEl.style.visibility = atLast ? "hidden" : "";
+    } else if (atLast) {
+      shatterButton(specialNextBtnEl);
+    } else {
+      reassembleButton(specialNextBtnEl);
+    }
+  }
+}
+
+document.getElementById("specialBtn").addEventListener("click", () => {
+  clearIterationCount();
+  goToSpecialScreen();
+});
+specialPriorBtnEl.addEventListener("click", () => {
+  if (specialBoxIndex === 0) return;
+  specialBoxIndex -= 1;
+  renderSpecialBox();
+});
+specialNextBtnEl.addEventListener("click", () => {
+  if (specialBoxIndex === 8) return;
+  specialBoxIndex += 1;
+  renderSpecialBox();
+});
+document.getElementById("specialReturnBtn").addEventListener("click", returnFromSpecialScreen);
+
 /* ===================== HELP MODAL ===================== */
 
 const helpOverlayEl = document.getElementById("helpOverlay");
@@ -1374,6 +1667,27 @@ function hideHelp() {
   helpOverlayEl.classList.remove("active");
 }
 
+// Wholly separate from showHelp()/hideHelp() above -- its own overlay, own
+// content (see #specialHelpOverlay in index.html) -- since it documents the
+// Special view, not the main puzzle, and must never be confused with it.
+const specialHelpOverlayEl = document.getElementById("specialHelpOverlay");
+
+function showSpecialHelp() {
+  document.getElementById("specialHelpVersionLine").textContent =
+    `Version ${APP_VERSION} — Last updated: ${HELP_LAST_UPDATED}`;
+  specialHelpOverlayEl.classList.add("active");
+}
+
+function hideSpecialHelp() {
+  specialHelpOverlayEl.classList.remove("active");
+}
+
+document.getElementById("specialHelpBtn").addEventListener("click", showSpecialHelp);
+document.getElementById("specialHelpCloseBtn").addEventListener("click", hideSpecialHelp);
+specialHelpOverlayEl.addEventListener("click", (event) => {
+  if (event.target === specialHelpOverlayEl) hideSpecialHelp();
+});
+
 document.getElementById("entryHelpBtn").addEventListener("click", () => {
   clearEntryHint();
   showHelp();
@@ -1404,6 +1718,7 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape") {
     hideHelp();
+    hideSpecialHelp();
     hidePrintInvalidPopup();
   }
 

@@ -494,6 +494,152 @@
     }
   }
 
+  /* Reverse of .shatter-shard/@keyframes shatterFall above -- used when the
+     Special view's Prior/Next buttons come back after being shattered away
+     (see reassembleButton() in sudoku-ui.js). Same shard shape/positioning,
+     just animating FROM an already-displaced state (below the viewport,
+     drifted and rotated -- the same --shard-dx/dy/rot ranges shatterFall's
+     shards land at) TO the button's real resting position, instead of the
+     other way around. animation-fill-mode: backwards (overriding
+     .shatter-shard's own forwards) so each shard shows its displaced "from"
+     state during its random animation-delay instead of flashing at its
+     final position first. */
+  .shatter-shard-assemble {
+    animation-name: shatterAssemble;
+    animation-fill-mode: backwards;
+  }
+
+  @keyframes shatterAssemble {
+    from {
+      transform: translate(var(--shard-dx), var(--shard-dy)) rotate(var(--shard-rot));
+      opacity: 0;
+    }
+    to {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* ===================== SPECIAL VIEW ===================== */
+  /* Magnified single-3x3-box editor (see goToSpecialScreen() etc. in
+     sudoku-ui.js) -- reuses .board-frame/.board for the same dark-wood/
+     parchment chrome as the entry/solving screens, and reuses
+     input.cell/.given/.solved-highlight verbatim for filled tiles (see
+     input.cell.special-cell below) so a filled cell here looks
+     pixel-identical to the same cell on the main board, just bigger. */
+  .special-box-label {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--hint);
+    margin: 0 0 12px;
+  }
+
+  .special-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 130px);
+    grid-template-rows: repeat(3, 130px);
+    gap: 6px;
+  }
+
+  /* Empty-cell tile (a <div>, not an <input> -- see buildEmptySpecialTile())
+     styled to match input.cell's own base look (background/border) before
+     any candidates are considered, so an unfilled tile reads as "the same
+     kind of empty square" as the main board's. */
+  .special-cell-empty {
+    width: 130px;
+    height: 130px;
+    border-radius: 2px;
+    background: #fffdf7;
+    border: 1px solid var(--line-soft);
+    cursor: pointer;
+  }
+
+  /* Wins over input.cell's own 32px width/height (element+class,
+     specificity 0,1,1) via the extra .special-cell class -- everything
+     else (given/solved-highlight colors, the disabled default cursor)
+     still comes straight from the existing input.cell/.given/
+     .solved-highlight rules with no duplicated color logic. */
+  input.cell.special-cell {
+    width: 130px;
+    height: 130px;
+    font-size: 3rem;
+  }
+
+  /* The 3x3 mini-grid of an empty tile's currently valid candidates --
+     same digit-to-position mapping renderPrintCanvas() uses for its own
+     per-cell candidate mini-grid (digit d at mini-row floor((d-1)/3),
+     mini-col (d-1)%3), so a candidate always lands in the same relative
+     spot whether it's shown here or on a printed page. */
+  .special-candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 100%;
+    height: 100%;
+  }
+
+  .special-candidate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--hint);
+  }
+
+  /* Same literal look as .candidate-btn (the main board's side-panel
+     candidate buttons) -- copied rather than shared via a class, since
+     .candidate-btn is hard-sized at 32px and this needs to fill its
+     variable-size grid slot instead. */
+  button.special-candidate-btn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fff59d;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  button.special-candidate-btn:hover { background: #fff176; }
+
+  /* Same #fff59d as input.cell.selected on the main board -- can't reuse
+     that selector directly since this is a <div>, not an <input>, but the
+     color is deliberately identical for the exact same "this cell is
+     selected" meaning. */
+  .special-cell-empty.selected {
+    background: #fff59d !important;
+    cursor: default;
+  }
+
+  @media (max-width: 520px) {
+    .special-grid { grid-template-columns: repeat(3, 110px); grid-template-rows: repeat(3, 110px); }
+    .special-cell-empty { width: 110px; height: 110px; }
+    input.cell.special-cell { width: 110px; height: 110px; font-size: 2.5rem; }
+    .special-candidate { font-size: 0.85rem; }
+    button.special-candidate-btn { font-size: 1.1rem; }
+  }
+
+  @media (max-width: 500px) {
+    .special-grid { grid-template-columns: repeat(3, 92px); grid-template-rows: repeat(3, 92px); }
+    .special-cell-empty { width: 92px; height: 92px; }
+    input.cell.special-cell { width: 92px; height: 92px; font-size: 2.1rem; }
+    .special-candidate { font-size: 0.72rem; }
+    button.special-candidate-btn { font-size: 0.95rem; }
+  }
+
+  @media (max-width: 400px) {
+    .special-grid { grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); }
+    .special-cell-empty { width: 70px; height: 70px; }
+    input.cell.special-cell { width: 70px; height: 70px; font-size: 1.5rem; }
+    .special-candidate { font-size: 0.6rem; }
+    button.special-candidate-btn { font-size: 0.75rem; }
+  }
+
   @media (max-width: 520px) {
     .grid {
       grid-template-columns: repeat(9, 28px) 150px;
@@ -642,6 +788,7 @@
       <button class="secondary" id="printBtn" title="Opens your browser's print dialog with a printable image of the current puzzle.">Print</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
+      <button class="secondary" id="specialBtn" title="Magnifies one 3x3 box at a time for easier candidate picking.">Special</button>
       <button class="secondary" id="solvingHelpBtn">Help</button>
       <button class="secondary" id="newClearBtn">New/Clear</button>
     </div>
@@ -649,6 +796,27 @@
     <div class="messages">
       <div class="status-line" id="statusLine"></div>
       <div class="status-line info" id="backupLine"></div>
+    </div>
+  </div>
+
+  <!-- ===================== SPECIAL VIEW ===================== -->
+  <!-- Magnified single-3x3-box editor -- reads from and writes straight
+       into the same solvingCells inputs the main solving screen above
+       uses, never a separate copy of the puzzle (see goToSpecialScreen()
+       and renderSpecialBox() in sudoku-ui.js). #specialGrid is rebuilt
+       from scratch every time the shown box changes. -->
+  <div class="screen" id="specialScreen">
+    <div class="board-frame">
+      <div class="board">
+        <p class="special-box-label" id="specialBoxLabel"></p>
+        <div class="special-grid" id="specialGrid"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="secondary" id="specialPriorBtn">Prior</button>
+      <button class="secondary" id="specialNextBtn">Next</button>
+      <button class="secondary" id="specialHelpBtn">Help</button>
+      <button id="specialReturnBtn">Return</button>
     </div>
   </div>
 
@@ -819,6 +987,50 @@
       <div class="modal-footer">
         <button class="secondary" id="statsBtn">View Puzzle Stats</button>
         <button id="helpCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SPECIAL VIEW HELP MODAL ===================== -->
+  <!-- Wholly separate from #helpOverlay above -- its own overlay, own
+       content, own close button -- since it documents a different screen
+       and must never be confused with the main puzzle's Help. Reuses the
+       same .modal-overlay/.modal presentation pattern (see showSpecialHelp()
+       in sudoku-ui.js). -->
+  <div class="modal-overlay" id="specialHelpOverlay">
+    <div class="modal">
+      <h2>Special View Help</h2>
+      <div class="modal-body">
+        <div class="help-meta-block">
+          <p class="help-meta" id="specialHelpVersionLine"></p>
+        </div>
+        <p>The Special view magnifies one of the puzzle's nine standard 3&times;3
+        boxes at a time, so its cells and their candidates are much easier to see
+        and pick from than the small squares on the main board.</p>
+        <h3>Filled cells</h3>
+        <p>A cell that already has a value &mdash; a given clue or a guess you've
+        already entered &mdash; just shows that value, styled exactly the same way
+        it is on the main board (given clues shaded darker, guesses plain). These
+        cells aren't clickable here.</p>
+        <h3>Empty cells</h3>
+        <p>An empty cell shows every digit that's still legally allowed there right
+        now, laid out in a small grid inside the cell. Click the cell itself to
+        select it &mdash; it turns yellow, exactly like selecting a cell on the main
+        board does &mdash; and its candidate digits become clickable. Click one to
+        fill it in; the puzzle updates immediately, the same as if you'd picked
+        that candidate on the main board.</p>
+        <h3>Next / Prior</h3>
+        <p><strong>Next</strong> and <strong>Prior</strong> move to the next or previous
+        of the nine boxes, in reading order (left to right, top to bottom).
+        <strong>Prior</strong> disappears on the first box, and <strong>Next</strong>
+        disappears on the last box, since there's nowhere further to go in that
+        direction &mdash; each reappears as soon as you're no longer at that end.</p>
+        <h3>Return</h3>
+        <p><strong>Return</strong> closes the Special view and takes you back to the
+        main puzzle screen, with any values you picked here already applied.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="specialHelpCloseBtn">Close</button>
       </div>
     </div>
   </div>

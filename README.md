@@ -76,9 +76,15 @@ A **View Puzzle Stats** button sits in the Help modal's footer, next to Close. I
 
 **Fun extra:** clicking "View Puzzle Stats" also shatters the button itself into a handful of jagged pieces that tumble off the bottom of the screen, with a synthesized glass-breaking crash (same Web Audio API approach as the app's existing invalid-entry beep, no audio files) — purely cosmetic, both the animation and its sound skipped automatically if the browser's reduced-motion setting is on, and the button always comes back intact the next time the Help modal opens.
 
+### Special view
+
+A **Special** button on the solving screen switches to a magnified, one-3×3-box-at-a-time view of the same puzzle — no separate copy of it, the same underlying cells the main board reads and writes. A filled cell (given or already-guessed) just shows its value, styled identically to the main board (given clues shaded darker, guesses plain). An empty cell shows every digit still legally valid there right now, laid out in a small grid inside the cell — the same candidate logic and per-cell mini-grid layout the print feature already uses. Clicking an empty cell highlights it yellow, exactly like selecting a cell on the main board, and turns its candidates into clickable buttons; picking one fills it in immediately.
+
+**Next** and **Prior** step through the puzzle's nine boxes in reading order (left to right, top to bottom); **Prior** disappears (via the same shatter effect described above, played in reverse) on the first box, and **Next** disappears the same way on the last box, each reappearing the moment you're no longer at that end. **Help** opens a Special-view-specific help document, wholly separate from the main puzzle's own Help. **Return** goes back to the main puzzle screen with anything you picked already applied.
+
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v3.0.0").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.0").
 
 ## How to run it
 
@@ -95,7 +101,7 @@ npm test
 
 ## File structure
 
-- **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including both screens (entry and solving), the candidate buttons (placed into the solving grid's bottom-right corner cell by `sudoku-ui.js`), the "Iteration: N" corner panel, and the Help modal.
+- **`index.html`** — the page markup and all styling (a single embedded `<style>` block), including all three screens (entry, solving, and the Special view), the candidate buttons (placed into the solving grid's bottom-right corner cell by `sudoku-ui.js`), the "Iteration: N" corner panel, and both Help modals (main and Special-view).
 - **`sudoku-logic.js`** — pure puzzle-solving logic with no DOM dependencies: tracking sets for rows/columns/boxes, naked-singles propagation, MRV backtracking search, solution counting/uniqueness checks, difficulty rating, puzzle generation, and save-record parsing. Works equally under Node or in the browser.
 - **`sudoku-ui.js`** — all DOM wiring and interactivity: building the grid, handling input/validation/beeps, candidate selection, backups, the solve/reset/write-to-file buttons, the Help modal, and registering the service worker. Relies entirely on `sudoku-logic.js` for the actual solving rules.
 - **`manifest.json`** — the PWA web app manifest (name, icons, theme colors, display mode) used for "Add to Home Screen" installs.
@@ -105,6 +111,7 @@ npm test
 
 ## Version history
 
+- **v4.0.0** — Added the Special view: a new "Special" button on the solving screen switches to a magnified, one-3×3-box-at-a-time editor of the same puzzle (no separate copy of it), with its own Next/Prior/Return/Help controls and its own, separate Help document. Purely additive — no changes to puzzle-solving/generation/validation logic, and no changes to the main puzzle screen's own behavior or Help content beyond the version number line.
 - **v3.0.0** — Replaced GoatCounter with [CountAPI](https://countapi.mileshilliard.com/) for the live hit counter (shared with sudoku-web via one key, `sudoku-gilshannon-live-total`). Removed GoatCounter entirely: the tracking script, the counter fetch, and the weekly country-stats breakdown feature built on top of it (the popup, its button, `stats-snapshot.json`, and the `update-stats.yml` GitHub Action). "View Puzzle Stats" now just shows the shared live total.
 - **v2.0.0** — Prior release.
 
