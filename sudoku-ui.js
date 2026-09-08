@@ -592,7 +592,13 @@ function launchSolvingScreen(puzzleGrid, reiterationCount) {
   clearIterationCount();
 }
 
-function goToEntryScreen() {
+// instant=false shatters the solving screen away first (see
+// transitionScreens() in the SPECIAL VIEW section below) instead of
+// swapping to the entry screen immediately -- used by New/Clear when
+// there's actually something on the board to dramatically discard (see
+// its handler). Defaults to instant so any other caller keeps today's
+// plain, unanimated swap.
+function goToEntryScreen(instant = true) {
   clearSolvedHighlight();
   puzzle = null;
   givenCells = new Set();
@@ -602,15 +608,17 @@ function goToEntryScreen() {
 
   document.getElementById("pageTitle").textContent = `Enter Your Puzzle v${APP_VERSION}`;
   difficultyLineEl.textContent = "";
-  document.getElementById("solvingScreen").classList.remove("active");
-  document.getElementById("entryScreen").classList.add("active");
-
+  // Entry screen content is fully rebuilt now, while it's still
+  // display:none -- ready before transitionScreens() below even starts a
+  // shatter, let alone by the time one finishes.
   resetEntryGrid();
   clearEntryHint();
   clearIterationCount();
   document.querySelectorAll('input[name="difficulty"]').forEach((radio) => {
     radio.checked = false;
   });
+
+  transitionScreens(document.getElementById("solvingScreen"), document.getElementById("entryScreen"), { instant });
 }
 
 function buildSolvingGrid() {
@@ -1273,6 +1281,26 @@ document.getElementById("resetBtn").addEventListener("click", () => {
   updateCandidateLabels();
 });
 
+// Whether the solving screen currently shows any user-entered guess (a
+// non-given cell with a value) -- the board's own visible content, not
+// backupStack (a separate, already-acknowledged-in-the-confirm-dialog
+// concept). Given cells are always present here (Start Solving requires at
+// least 6 filled squares, so a truly blank-including-givens grid can never
+// reach this screen) -- guesses are therefore the only meaningful signal
+// that there's something on the board worth dramatically shattering away;
+// with none, New/Clear's own confirm dialog already established the user's
+// intent, so the plain instant swap is enough. Checked directly against the
+// live cell values rather than moveHistory.length, since moveHistory isn't
+// touched by clearing a guess via the Special view (see clearSpecialGuess())
+// -- a cell cleared that way would make this correctly report "no guesses"
+// even though moveHistory still has a stale entry for it.
+function solvingBoardHasGuesses() {
+  for (const key in solvingCells) {
+    if (!givenCells.has(key) && solvingCells[key].value !== "") return true;
+  }
+  return false;
+}
+
 document.getElementById("newClearBtn").addEventListener("click", () => {
   clearIterationCount();
   const confirmed = window.confirm(
@@ -1280,7 +1308,7 @@ document.getElementById("newClearBtn").addEventListener("click", () => {
     "sure you want to continue?"
   );
   if (!confirmed) return;
-  goToEntryScreen();
+  goToEntryScreen(!solvingBoardHasGuesses());
 });
 
 /* ===================== UNDO (CTRL+Z) ===================== */
@@ -1390,17 +1418,20 @@ function shatterScreen(screenEl, onComplete) {
 // Swaps the active screen from fromEl to toEl, shattering fromEl away first
 // (see shatterScreen() above) unless reduced motion is on, in which case the
 // swap just happens instantly -- same fallback shatterButton()'s own call
-// sites use. toEl's own content must already be fully up to date BEFORE this
-// runs (see goToSpecialScreen()/returnFromSpecialScreen()): this only ever
-// changes which screen is visible, never anything about puzzle state, so
-// there's nothing left to compute once the animation finishes. Guards
-// against overlapping transitions (e.g. a second click on Special/Return
-// before the first one's shards finish falling) with a single in-progress
-// flag, since only one of these two screens can ever be transitioning at a
-// time.
+// sites use. Also happens instantly, regardless of reduced motion, when the
+// caller passes { instant: true } -- used by goToEntryScreen() when New/Clear
+// has nothing worth dramatically discarding (see its handler). toEl's own
+// content must already be fully up to date BEFORE this runs (see
+// goToSpecialScreen()/returnFromSpecialScreen()/goToEntryScreen()): this
+// only ever changes which screen is visible, never anything about puzzle
+// state, so there's nothing left to compute once the animation finishes.
+// Guards against overlapping transitions (e.g. a second click on
+// Special/Return/New-Clear before the first one's shards finish falling)
+// with a single in-progress flag, since only one of these screens can ever
+// be transitioning at a time.
 let screenTransitionActive = false;
 
-function transitionScreens(fromEl, toEl) {
+function transitionScreens(fromEl, toEl, { instant = false } = {}) {
   if (screenTransitionActive) return;
 
   const swap = () => {
@@ -1410,7 +1441,7 @@ function transitionScreens(fromEl, toEl) {
     screenTransitionActive = false;
   };
 
-  if (prefersReducedMotion.matches) {
+  if (instant || prefersReducedMotion.matches) {
     swap();
   } else {
     screenTransitionActive = true;
