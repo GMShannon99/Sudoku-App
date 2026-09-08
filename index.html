@@ -565,6 +565,14 @@
     font-size: 3rem;
   }
 
+  /* A previously-guessed cell's filled tile (readOnly, not disabled -- see
+     buildFilledSpecialTile() in sudoku-ui.js) -- clicking it clears the
+     guess, so it gets the pointer cursor a given/clue cell's plain default
+     (text) cursor deliberately doesn't. */
+  input.cell.special-cell-guess {
+    cursor: pointer;
+  }
+
   /* The 3x3 mini-grid of an empty tile's currently valid candidates --
      same digit-to-position mapping renderPrintCanvas() uses for its own
      per-cell candidate mini-grid (digit d at mini-row floor((d-1)/3),
@@ -784,7 +792,6 @@
     <div class="controls">
       <button id="saveBtn">Save</button>
       <button class="secondary" id="writeToFileBtn" title="Each save creates a new file in your browser's default downloads folder.">Write to File</button>
-      <button class="secondary" id="downloadJpgBtn" title="Downloads a printable JPG image of the current puzzle.">Download JPG</button>
       <button class="secondary" id="printBtn" title="Opens your browser's print dialog with a printable image of the current puzzle.">Print</button>
       <button id="solveBtn">Solve</button>
       <button class="secondary" id="resetBtn">Reset</button>
@@ -943,18 +950,15 @@
           puzzle, or starting a new one) &mdash; purely cosmetic, and both the
           animation and its sound are skipped if your browser's reduced-motion
           setting is on.</li>
-          <li><strong>Download JPG</strong> and <strong>Print</strong> &mdash; Both generate the
-          same printable image of the puzzle exactly as it currently stands: given clues
-          shaded with a light grey background, your entries on a plain background, the same
-          row/column missing-digit numbers shown on screen, and every empty square's
-          remaining valid candidates laid out in a small grid so it can be worked on with pen
-          or pencil. <strong>Download JPG</strong> saves it as a file, for emailing,
-          attaching, or printing later from a computer. <strong>Print</strong> instead opens
-          your browser's print dialog directly with that image &mdash; on a phone, this is
-          the same Share Sheet / print flow (e.g. AirPrint on iOS) any other app's print
-          button would open, with no file to find first. If the current entries have no
-          valid solution at all, either button shows a popup explaining this instead, and
-          nothing is generated.</li>
+          <li><strong>Print</strong> &mdash; Generates a printable image of the puzzle
+          exactly as it currently stands: given clues shaded with a light grey background,
+          your entries on a plain background, the same row/column missing-digit numbers
+          shown on screen, and every empty square's remaining valid candidates laid out in
+          a small grid so it can be worked on with pen or pencil &mdash; then opens your
+          browser's print dialog directly with that image, with no file to find first. On
+          a phone, this is the same Share Sheet / print flow (e.g. AirPrint on iOS) any
+          other app's print button would open. If the current entries have no valid
+          solution at all, a popup explains this instead, and nothing is generated.</li>
           <li><strong>Reset</strong> &mdash; Restores the most recently saved backup. If you've
           never clicked Save, this instead clears the grid back to the original
           puzzle's clues.</li>
@@ -1009,9 +1013,13 @@
         and pick from than the small squares on the main board.</p>
         <h3>Filled cells</h3>
         <p>A cell that already has a value &mdash; a given clue or a guess you've
-        already entered &mdash; just shows that value, styled exactly the same way
-        it is on the main board (given clues shaded darker, guesses plain). These
-        cells aren't clickable here.</p>
+        already entered &mdash; shows that value, styled exactly the same way it
+        is on the main board (given clues shaded darker, guesses plain). A given
+        clue isn't clickable here, same as on the main board. A guess, though,
+        can be clicked to clear it back to empty, immediately showing that
+        cell's candidates again (recalculated fresh, since removing a guess can
+        legalize digits that weren't valid a moment ago) so you can pick a
+        different one the normal way.</p>
         <h3>Empty cells</h3>
         <p>An empty cell shows every digit that's still legally allowed there right
         now, laid out in a small grid inside the cell. Click the cell itself to
@@ -1036,26 +1044,25 @@
   </div>
 
   <!-- ================= PRINT PUZZLE: PRINT PREVIEW IMAGE ================= -->
-  <!-- Populated by printBtn's handler (see sudoku-ui.js) with the same
-       canvas-generated JPG data URL downloadJpgBtn saves to a file, then
-       revealed via @media print (see <style> above) so window.print() has
-       something to print. Invisible on-screen at all other times.
-       #printFooter is a plain, static line (not drawn onto the canvas, so
-       it never ends up in the downloaded JPG) -- an explicit site credit
-       for the printed page, rather than relying on the browser's own
-       automatic print header/footer (page title/URL in small grey text),
-       which isn't guaranteed to appear the same way -- or at all -- across
-       browsers, devices, or a user's print settings. -->
+  <!-- Populated by printBtn's handler (see sudoku-ui.js) with a
+       canvas-generated JPG data URL, then revealed via @media print (see
+       <style> above) so window.print() has something to print. Invisible
+       on-screen at all other times. #printFooter is a plain, static line
+       (not drawn onto the canvas, so it never ends up in the printed
+       image) -- an explicit site credit for the printed page, rather than
+       relying on the browser's own automatic print header/footer (page
+       title/URL in small grey text), which isn't guaranteed to appear the
+       same way -- or at all -- across browsers, devices, or a user's
+       print settings. -->
   <div id="printArea">
     <img id="printImage" alt="Printable Sudoku puzzle">
     <p id="printFooter">https://gmshannon99.github.io/Sudoku-App/</p>
   </div>
 
   <!-- ================= PRINT PUZZLE: NO VALID SOLUTION POPUP ================= -->
-  <!-- Shown by downloadJpgBtn's/printBtn's handlers (see sudoku-ui.js) instead
-       of generating an image, whenever the current grid has no valid
-       solution at all. Reuses the same modal-overlay/modal pattern as
-       #helpOverlay. -->
+  <!-- Shown by printBtn's handler (see sudoku-ui.js) instead of generating
+       an image, whenever the current grid has no valid solution at all.
+       Reuses the same modal-overlay/modal pattern as #helpOverlay. -->
   <div class="modal-overlay" id="printInvalidOverlay">
     <div class="modal">
       <h2>Cannot Print</h2>

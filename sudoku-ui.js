@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "4.0.0";
+const APP_VERSION = "4.0.1";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type a digit into the squares you want filled.";
@@ -49,13 +49,10 @@ const PASTE_VALIDATION_MAX_ITERATIONS = 50_000;
 // a live snapshot instead of a pure puzzle definition.
 const SAVE_FILE_NAME = "Sudoku_Save.txt";
 
-// Print Puzzle downloads. Letter-size (8.5in x 11in) portrait at a
+// Print Puzzle image. Letter-size (8.5in x 11in) portrait at a
 // print-appropriate 150 DPI -- 8.5*150 x 11*150 -- rendered on an in-memory
-// <canvas> (never attached to the DOM) and exported as a JPG the same way
-// SAVE_FILE_NAME above already downloads a file: build an object URL (or in
-// this case a data URL -- canvas.toDataURL() -- since there's no Blob step
-// needed), point a throwaway <a download> at it, and click it.
-const PRINT_FILE_NAME = "Sudoku_Print.jpg";
+// <canvas> (never attached to the DOM) and exported as a JPG data URL
+// (canvas.toDataURL()) that printBtn points its hidden #printImage at.
 const PRINT_JPEG_QUALITY = 0.92;
 const PRINT_CANVAS_WIDTH = 1275;
 const PRINT_CANVAS_HEIGHT = 1650;
@@ -1029,9 +1026,9 @@ function hidePrintInvalidPopup() {
   printInvalidOverlayEl.classList.remove("active");
 }
 
-// Shared by downloadJpgBtn and printBtn: returns the current grid if it has
-// a valid solution, or shows the "Cannot Print" popup and returns null if
-// not. Callers only ever handle the grid once they know it's real.
+// Returns the current grid if it has a valid solution, or shows the
+// "Cannot Print" popup and returns null if not. Called by printBtn's
+// handler, which only ever handles the grid once it knows it's real.
 function getPrintableGridOrShowInvalid() {
   clearIterationCount();
 
@@ -1201,27 +1198,12 @@ function renderPrintCanvas(grid) {
   return canvas.toDataURL("image/jpeg", PRINT_JPEG_QUALITY);
 }
 
-document.getElementById("downloadJpgBtn").addEventListener("click", () => {
-  const grid = getPrintableGridOrShowInvalid();
-  if (!grid) return;
-
-  const dataUrl = renderPrintCanvas(grid);
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = PRINT_FILE_NAME;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  setStatus(`Downloaded ${PRINT_FILE_NAME}.`, "success");
-});
-
 // Prints directly instead of requiring the user to download a file and open
 // it separately (a particular hassle on iOS, where that means digging the
-// image out of the Files app before Share > Print is even reachable). Reuses
-// the same renderPrintCanvas() image as Download JPG, but points #printImage
-// at it and calls window.print() -- @media print (see index.html's <style>)
-// hides everything else on the page for the duration of the print dialog.
+// image out of the Files app before Share > Print is even reachable). Builds
+// the same renderPrintCanvas() image, points #printImage at it, and calls
+// window.print() -- @media print (see index.html's <style>) hides
+// everything else on the page for the duration of the print dialog.
 //
 // Deliberately NOT window.open()-ing a separate print window/tab: besides
 // desktop popup blockers (which only allow window.open() as a *synchronous*
@@ -1353,6 +1335,89 @@ function redoLastMove() {
 // same computeValidCandidates()/recordMove()/updateCandidateLabels()/
 // maybeAutoSolve() the main board's own candidate buttons already rely on.
 
+// Whole-screen version of shatterButton() above (see there for the shard
+// mechanics themselves) -- used to transition into/out of the Special view
+// (see transitionScreens() below) instead of a single button. Clones the
+// entire screen element into jagged vertical shards exactly like
+// shatterButton() does, just more of them for the larger area, and -- unlike
+// shatterButton()'s shards -- does NOT force a solid fill color, since a
+// whole screen already has its own real board/parchment background to show
+// through the cut lines (shatterButton() only needs that override because
+// its buttons can have a transparent `.secondary` background). Every
+// descendant's id is stripped from each clone (not just the screen's own),
+// since the screen's subtree has several ids of its own (#solvingGrid,
+// #candidateGrid, etc.) that would otherwise collide with the real,
+// still-live element while the clones are briefly in the DOM. Purely a
+// visual transition -- calls onComplete the instant the last shard
+// finishes falling, and nothing about the puzzle's own state waits on it
+// (see goToSpecialScreen()/returnFromSpecialScreen()).
+function shatterScreen(screenEl, onComplete) {
+  shatterSound();
+
+  const rect = screenEl.getBoundingClientRect();
+  const shardCount = randomInt(10, 16);
+  const { top, bottom } = buildShatterBoundaries(shardCount);
+
+  screenEl.style.visibility = "hidden";
+  let remaining = shardCount;
+
+  for (let i = 0; i < shardCount; i++) {
+    const shard = screenEl.cloneNode(true);
+    shard.removeAttribute("id");
+    shard.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    shard.classList.add("shatter-shard");
+    shard.style.visibility = "visible";
+    shard.style.left = `${rect.left}px`;
+    shard.style.top = `${rect.top}px`;
+    shard.style.width = `${rect.width}px`;
+    shard.style.height = `${rect.height}px`;
+    shard.style.clipPath =
+      `polygon(${top[i]}% 0%, ${top[i + 1]}% 0%, ${bottom[i + 1]}% 100%, ${bottom[i]}% 100%)`;
+    shard.style.setProperty("--shard-dx", `${randomInt(-80, 80)}px`);
+    shard.style.setProperty("--shard-dy", `${Math.round(window.innerHeight - rect.top + 200)}px`);
+    shard.style.setProperty("--shard-rot", `${randomInt(-160, 160)}deg`);
+    shard.style.animationDuration = `${randomInt(600, 950)}ms`;
+    shard.style.animationDelay = `${randomInt(0, 90)}ms`;
+    shard.addEventListener("animationend", () => {
+      shard.remove();
+      remaining -= 1;
+      if (remaining === 0) onComplete();
+    });
+    document.body.append(shard);
+  }
+}
+
+// Swaps the active screen from fromEl to toEl, shattering fromEl away first
+// (see shatterScreen() above) unless reduced motion is on, in which case the
+// swap just happens instantly -- same fallback shatterButton()'s own call
+// sites use. toEl's own content must already be fully up to date BEFORE this
+// runs (see goToSpecialScreen()/returnFromSpecialScreen()): this only ever
+// changes which screen is visible, never anything about puzzle state, so
+// there's nothing left to compute once the animation finishes. Guards
+// against overlapping transitions (e.g. a second click on Special/Return
+// before the first one's shards finish falling) with a single in-progress
+// flag, since only one of these two screens can ever be transitioning at a
+// time.
+let screenTransitionActive = false;
+
+function transitionScreens(fromEl, toEl) {
+  if (screenTransitionActive) return;
+
+  const swap = () => {
+    fromEl.classList.remove("active");
+    fromEl.style.visibility = "";
+    toEl.classList.add("active");
+    screenTransitionActive = false;
+  };
+
+  if (prefersReducedMotion.matches) {
+    swap();
+  } else {
+    screenTransitionActive = true;
+    shatterScreen(fromEl, swap);
+  }
+}
+
 const specialScreenEl = document.getElementById("specialScreen");
 const specialGridEl = document.getElementById("specialGrid");
 const specialBoxLabelEl = document.getElementById("specialBoxLabel");
@@ -1398,39 +1463,78 @@ function goToSpecialScreen() {
   specialBoxIndex = 0;
   specialPriorHidden = null;
   specialNextHidden = null;
-  document.getElementById("solvingScreen").classList.remove("active");
-  specialScreenEl.classList.add("active");
+  // Builds the magnified box's DOM now, while specialScreen is still
+  // display:none -- it's fully ready before the shatter transition even
+  // starts, let alone by the time it finishes (see transitionScreens()).
   renderSpecialBox();
+  transitionScreens(document.getElementById("solvingScreen"), specialScreenEl);
 }
 
 function returnFromSpecialScreen() {
   specialSelectedCell = null;
-  specialScreenEl.classList.remove("active");
-  document.getElementById("solvingScreen").classList.add("active");
-  // Cells may have been filled while in the Special view -- refresh the
-  // main board's row/column-missing labels, exactly as its own input
-  // handlers already do after every guess (maybeAutoSolve() itself was
-  // already run at the moment each digit was placed, not deferred to
-  // here -- see fillSpecialCellWithDigit()).
+  // Cells may have been filled (or cleared -- see clearSpecialGuess())
+  // while in the Special view -- refresh the main board's row/column-
+  // missing labels now, exactly as its own input handlers already do after
+  // every guess, so the main screen is already current before it's shown
+  // again (maybeAutoSolve() itself was already run at the moment each
+  // digit was placed, not deferred to here -- see fillSpecialCellWithDigit()).
   updateCandidateLabels();
+  transitionScreens(specialScreenEl, document.getElementById("solvingScreen"));
 }
 
-// Builds one magnified filled-cell tile: a disabled <input class="cell">
-// mirroring solvingCells[key]'s current value/given/solved-highlight
-// styling exactly -- copying its classList/inline color rather than
-// recomputing any of it -- so a filled cell here looks pixel-identical to
-// the same cell on the main board, just bigger (see input.cell.special-cell
-// in index.html).
+// Builds one magnified filled-cell tile: an <input class="cell"> mirroring
+// solvingCells[key]'s current value/given/solved-highlight styling exactly
+// -- copying its classList/inline color rather than recomputing any of it
+// -- so a filled cell here looks pixel-identical to the same cell on the
+// main board, just bigger (see input.cell.special-cell in index.html).
+//
+// source.disabled mirrors the main board's own edit-ability for this exact
+// cell -- true for a given/clue cell always, and true for a guessed cell
+// too once the puzzle is solved (see markSolved()) -- so reusing it here
+// (rather than checking the "given" class alone) means a solved puzzle's
+// guesses stay locked in the Special view exactly as they are on the main
+// board, instead of offering to un-solve a completed puzzle through a back
+// door this view would otherwise open. Only an unlocked guess cell gets
+// readOnly (not disabled, so it still receives the click below) and the
+// pointer cursor; clicking it clears it back to empty via
+// clearSpecialGuess(). A given cell stays fully disabled and unclickable,
+// as before.
 function buildFilledSpecialTile(row, col) {
   const source = solvingCells[`${row},${col}`];
   const tile = document.createElement("input");
   tile.className = "cell special-cell";
-  tile.disabled = true;
   tile.value = source.value;
   if (source.classList.contains("given")) tile.classList.add("given");
   if (source.classList.contains("solved-highlight")) tile.classList.add("solved-highlight");
   tile.style.color = source.style.color;
+
+  if (source.disabled) {
+    tile.disabled = true;
+  } else {
+    tile.readOnly = true;
+    tile.classList.add("special-cell-guess");
+    tile.addEventListener("click", () => clearSpecialGuess(row, col));
+  }
+
   return tile;
+}
+
+// Clears a previously-guessed (non-given, not-yet-solved) cell back to
+// empty when its filled tile is clicked in the Special view (see
+// buildFilledSpecialTile() above), then re-renders the box so it
+// immediately shows as an empty tile with freshly recomputed candidates --
+// removing a guess can legalize digits that weren't valid candidates while
+// it was still filled, so these can't just be read back off the old tile.
+// Deliberately doesn't touch moveHistory/redoStack: this is a fresh "make
+// it empty again" action, not an Undo, so it doesn't interact with Ctrl+Z's
+// own history -- a Ctrl+Z afterward, back on the main screen, would just
+// harmlessly re-clear a cell that's already empty rather than undo
+// whatever move now sits at the top of that stack.
+function clearSpecialGuess(row, col) {
+  solvingCells[`${row},${col}`].value = "";
+  setStatus("", "");
+  updateCandidateLabels();
+  renderSpecialBox();
 }
 
 // Builds one magnified empty-cell tile: a 3x3 mini-grid of this cell's
