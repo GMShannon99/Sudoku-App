@@ -85,7 +85,7 @@ Switching into the Special view (via **Special**) or back out of it (via **Retur
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.1").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Puzzle v4.0.2").
 
 ## How to run it
 
@@ -112,6 +112,7 @@ npm test
 
 ## Version history
 
+- **v4.0.2** — Renamed the "Save" button to "Backup for Reset" (label only, same behavior) and moved it to sit immediately before Reset, since the two are a matched pair. New/Clear now shatters the whole solving screen apart first, the same effect the Special view's transitions use, but only when there's an actual user-entered guess on the board to discard — with nothing entered, it skips straight to the entry screen.
 - **v4.0.1** — Removed the Download JPG button (Print alone now covers printing/saving the puzzle image). Switching into or out of the Special view now shatters the whole screen apart first, the same effect the Prior/Next/Solve/View Puzzle Stats buttons already use, just scaled up to cover the entire board and controls. In the Special view, a previously-guessed cell (not a given clue) can now be clicked to clear it back to empty and immediately re-shows its candidates, instead of being locked like a given cell.
 - **v4.0.0** — Added the Special view: a new "Special" button on the solving screen switches to a magnified, one-3×3-box-at-a-time editor of the same puzzle (no separate copy of it), with its own Next/Prior/Return/Help controls and its own, separate Help document. Purely additive — no changes to puzzle-solving/generation/validation logic, and no changes to the main puzzle screen's own behavior or Help content beyond the version number line.
 - **v3.0.0** — Replaced GoatCounter with [CountAPI](https://countapi.mileshilliard.com/) for the live hit counter (shared with sudoku-web via one key, `sudoku-gilshannon-live-total`). Removed GoatCounter entirely: the tracking script, the counter fetch, and the weekly country-stats breakdown feature built on top of it (the popup, its button, `stats-snapshot.json`, and the `update-stats.yml` GitHub Action). "View Puzzle Stats" now just shows the shared live total.
