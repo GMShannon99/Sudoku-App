@@ -7,7 +7,7 @@
  * forever.
  */
 
-const CACHE_VERSION = "v8";
+const CACHE_VERSION = "v9";
 const CACHE_NAME = `sudoku-static-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -44,22 +44,10 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// CountAPI's live hit counter must always be requested fresh -- never
-// served from or written to the cache -- both because it's a live count
-// that should never show stale offline data, and because it increments on
-// every call: serving a cached response would just mean showing an old
-// number, but writing one into Cache Storage risks it later being replayed
-// instead of a real hit.
-function isNetworkOnly(url) {
-  if (url.hostname === "countapi.mileshilliard.com") return true;
-  return false;
-}
-
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
-  if (isNetworkOnly(url)) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

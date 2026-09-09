@@ -23,7 +23,7 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "4.0.7";
+const APP_VERSION = "4.0.8";
 const HELP_LAST_UPDATED = "September 7, 2026";
 
 const ENTRY_HINT_TEXT = "Type in Sudoku digits to create a Puzzle.";
@@ -410,12 +410,14 @@ document.getElementById("pasteBtn").addEventListener("click", async () => {
 // Purely cosmetic "shatter" effect, reusable for any button: clones it into
 // 5-8 jagged pieces and animates them falling off the bottom of the screen.
 // Used by the Help modal's "View Puzzle Stats" button (see showHelp() etc.
-// below) and the solving screen's Solve button on a successful solve (see
-// showSolvedHighlight()/clearSolvedHighlight()) -- both call the same
+// below), the solving screen's Solve button on a successful solve (see
+// showSolvedHighlight()/clearSolvedHighlight()), and the Special view's
+// Prior/Next buttons (see updateSpecialNavButtons()) -- all call the same
 // shatterButton()/resetButtonShatter() pair rather than each having their
 // own copy. Each shard is tagged with which button it came from
-// (data-shatter-owner), so if both buttons happened to shatter around the
-// same time, resetting one's shards/visibility never touches the other's.
+// (data-shatter-owner), so if more than one button happened to shatter
+// around the same time, resetting one's shards/visibility never touches
+// another's.
 
 // Checked once, not per-click/per-button, since a user's OS-level motion
 // preference doesn't change mid-session. window.matchMedia is absent in
@@ -1798,82 +1800,25 @@ const helpOverlayEl = document.getElementById("helpOverlay");
 const statsResultEl = document.getElementById("statsResult");
 const statsBtnEl = document.getElementById("statsBtn");
 
-// CountAPI's free "hit" counter -- incrementing GET that bumps the given
-// key by 1 and returns the new total in `value`. Uses the exact same key
-// as sudoku-web so both surfaces contribute to and display one shared
-// total rather than two separate counts. Fired exactly once here, at
-// script load (mirroring where the old GoatCounter tracking pixel used to
-// silently increment on every page view) -- calling /hit/ again from the
-// button below would inflate the total by 1 on every click, so
-// showPuzzleStats() only ever displays this one request's result.
-const COUNTAPI_KEY = "sudoku-gilshannon-live-total";
-const COUNTAPI_HIT_URL = `https://countapi.mileshilliard.com/api/v1/hit/${COUNTAPI_KEY}`;
-const COUNTAPI_FETCH_TIMEOUT_MS = 6000;
+// The dashboard behind this is public (a Umami "share" link, not the
+// authenticated stats API) -- exactly so nothing secret ever has to ship
+// to the browser to show it, unlike an API-key-based fetch would. Just a
+// link out; no request of our own to succeed or fail.
+const UMAMI_SHARE_URL = "https://cloud.umami.is/share/7Ent2VwDGvCfoq6r";
 
-// Guarded rather than called bare -- this runs at script load, including
-// under the Node/jsdom test suite (tests/undo-redo.test.js), which has no
-// global fetch. Falling back to a rejected promise there (and in any real
-// browser where fetch is somehow unavailable) keeps this a no-op instead
-// of a load-time crash; showPuzzleStats() already treats a rejection as
-// "Puzzle stats are currently unavailable."
-const liveHitCountRequest =
-  typeof fetch === "function"
-    ? (() => {
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), COUNTAPI_FETCH_TIMEOUT_MS);
-        return fetch(COUNTAPI_HIT_URL, { cache: "no-store", signal: controller.signal })
-          .then((response) => {
-            if (!response.ok) throw new Error(`Unexpected response status: ${response.status}`);
-            return response.json();
-          })
-          .then((data) => {
-            if (typeof data.value !== "number") {
-              throw new Error("Unexpected response shape from CountAPI.");
-            }
-            return data.value;
-          });
-      })()
-    : Promise.reject(new Error("fetch is not available in this environment."));
-// Silences "unhandled rejection" noise if this fails (or is skipped) before
-// the button's ever clicked -- showPuzzleStats() below attaches its own,
-// separate handler to the same promise when it actually needs the result.
-liveHitCountRequest.catch(() => {});
-
-// Hides and clears any previously shown stats. Called every time the Help
-// modal opens so "View Puzzle Stats" always has to be clicked fresh --
-// stats never linger into a later Help visit without that click.
+// Hides and clears any previously shown message. Called every time the
+// Help modal opens so "View Puzzle Stats" always has to be clicked fresh.
 function resetStatsResult() {
   statsResultEl.hidden = true;
-  statsResultEl.classList.remove("error");
   statsResultEl.textContent = "";
 }
 
-// Renders the one-time liveHitCountRequest result into statsResultEl -- or
-// a plain "unavailable" message if that request failed, timed out, or
-// came back an unexpected shape. Never re-fetches: CountAPI's endpoint
-// increments on every call, so every click here just displays the single
-// result from the page-load request above.
-async function showPuzzleStats() {
+// Brief confirmation shown in the same spot an inline count used to live,
+// for the instant before the new tab takes focus -- there's nothing to
+// load or fail here, so this never changes again after being set.
+function showPuzzleStats() {
   statsResultEl.hidden = false;
-  statsResultEl.classList.remove("error");
-  statsResultEl.textContent = "Loading puzzle stats…";
-
-  try {
-    const count = await liveHitCountRequest;
-
-    statsResultEl.textContent = "";
-    statsResultEl.append("Total visits: ");
-    const strong = document.createElement("strong");
-    strong.textContent = String(count);
-    statsResultEl.append(strong);
-    const note = document.createElement("span");
-    note.className = "stats-note";
-    note.textContent = "Live hit count — shared with sudoku-web.";
-    statsResultEl.append(note);
-  } catch (e) {
-    statsResultEl.classList.add("error");
-    statsResultEl.textContent = "Puzzle stats are currently unavailable.";
-  }
+  statsResultEl.textContent = "Opening live stats…";
 }
 
 function showHelp() {
@@ -1922,6 +1867,10 @@ statsBtnEl.addEventListener("click", () => {
   // prefers-reduced-motion -- and never touches showPuzzleStats() itself.
   showPuzzleStats();
   if (!prefersReducedMotion.matches) shatterButton(statsBtnEl);
+  // noopener/noreferrer: this tab keeps no reference to (and sends no
+  // referrer info to) the new one, standard practice for any window.open()
+  // targeting an external URL.
+  window.open(UMAMI_SHARE_URL, "_blank", "noopener,noreferrer");
 });
 document.getElementById("helpCloseBtn").addEventListener("click", hideHelp);
 helpOverlayEl.addEventListener("click", (event) => {

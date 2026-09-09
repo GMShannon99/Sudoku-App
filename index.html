@@ -500,10 +500,10 @@
   }
 
   /* Populated only after clicking "View Puzzle Stats" (see statsBtn's
-     handler in sudoku-ui.js) -- hidden the rest of the time, and re-hidden
-     every time its containing modal opens, so this is the only place the
-     live hit count is ever shown and only ever as a direct result of that
-     click. */
+     handler in sudoku-ui.js) -- a brief "Opening live stats…" confirmation
+     shown right before that click opens the public Umami dashboard in a
+     new tab. Hidden the rest of the time, and re-hidden every time its
+     containing modal opens, so it never lingers from an earlier click. */
   .stats-result {
     padding: 8px 22px 14px;
     font-size: 0.8rem;
@@ -511,15 +511,10 @@
     border-top: 1px solid rgba(184,163,127,0.25);
   }
 
-  .stats-result.error { color: var(--accent); }
-  .stats-result .stats-note { display: block; margin-top: 2px; font-size: 0.75rem; }
-
-  .stats-result ul { margin: 6px 0 0; padding-left: 18px; }
-  .stats-result li { margin-bottom: 3px; }
-
   /* Clones of a button created by shatterButton() in sudoku-ui.js (used by
-     both the "View Puzzle Stats" and Solve buttons) -- each one clip-path'd
-     down to a single jagged slice of the button and fixed-positioned
+     the Help modal's "View Puzzle Stats" button, the Solve button, and
+     the Special view's Prior/Next buttons) -- each one clip-path'd down
+     to a single jagged slice of the button and fixed-positioned
      exactly over its real on-screen spot, then animated falling off the
      bottom of the screen. Skipped entirely under prefers-reduced-motion
      (checked in JS -- no shard is ever created in that case, so none of
@@ -819,6 +814,7 @@
   }
   @page { margin: 0.3in; }
 </style>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="0507fbe0-0c6b-4baf-ac69-1f1e3c5af301"></script>
 </head>
 <body>
 
@@ -1068,14 +1064,6 @@
         <p>Once a puzzle is loaded onto the solving screen, a &ldquo;Difficulty Level&rdquo;
         line appears above the grid: Easy, Moderate, or Hard, based on how many
         backtracking guesses the solver needed for this exact puzzle.</p>
-
-        <h3>Puzzle stats</h3>
-        <p>The &ldquo;View Puzzle Stats&rdquo; button below shows a live hit count right
-        here, shared with the sudoku-web site so both surfaces count toward one
-        combined total. This button is the only place in the app where that count
-        is ever shown; it stays hidden otherwise. Clicking it also breaks the
-        button itself apart with a synthesized glass-breaking sound (both the
-        animation and the sound are skipped under reduced motion).</p>
       </div>
       <div class="stats-result" id="statsResult" hidden></div>
       <div class="modal-footer">
