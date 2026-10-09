@@ -35,7 +35,7 @@ const SCENARIO_HELPERS = `
   // Finds an empty, editable cell (optionally excluding one) and a digit
   // that's actually legal there right now, mirroring the row/column/box
   // check onSolvingCellInput itself does -- so typing it never gets
-  // silently rejected with a beep.
+  // silently rejected with a ding.
   function findLegalMove(excludeKey) {
     const grid = readGrid(solvingCells);
     for (const key in solvingCells) {

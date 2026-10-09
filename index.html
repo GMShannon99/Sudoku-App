@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sudoku">
+<link rel="stylesheet" href="learn-mode.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -797,11 +798,10 @@
        HEIGHT in sudoku-ui.js), so scaling it to width: 100% of the @page's
        7.9in-wide printable area also scales it to nearly the full 10.4in
        printable height -- leaving no room for #printFooter below it, which
-       would then spill onto its own second page. Capping the height at
-       10in instead reserves a guaranteed ~0.4in strip underneath for the
-       footer, while width: auto (from the same aspect ratio) still
-       comfortably clears the printable width, so the whole thing fits on
-       one page. */
+       then spilled onto its own second page. Capping the height at 10in
+       instead reserves a guaranteed ~0.4in strip underneath for the footer,
+       while width: auto (from the same aspect ratio) still comfortably
+       clears the printable width, so the whole thing fits on one page. */
     #printImage { display: block; height: 10in; width: auto; max-width: 100%; margin: 0 auto; }
     #printFooter {
       display: block;
@@ -853,6 +853,12 @@
             <label><input type="radio" name="difficulty" value="Hard"> Hard</label>
           </div>
           <button class="secondary" id="entryHelpBtn">Help</button>
+          <!-- LEARN MODE switch (see learn-mode-ui.js) -->
+          <label class="learn-toggle">
+            <input type="checkbox" id="learnModeToggle" role="switch">
+            <span class="learn-track"></span>
+            <span>Learn Mode</span>
+          </label>
         </div>
       </div>
     </div>
@@ -900,6 +906,21 @@
       <button class="secondary" id="specialNextBtn">Next</button>
       <button class="secondary" id="specialHelpBtn">Help</button>
       <button id="specialReturnBtn">Return</button>
+    </div>
+  </div>
+
+  <!-- LEARN MODE solving screen (4x4; see learn-mode-ui.js). -->
+  <div class="screen" id="learnScreen">
+    <div class="learn-board-frame">
+      <div class="learn-grid" id="learnGrid"></div>
+    </div>
+    <div class="controls">
+      <button class="secondary" id="learnResetBtn">Reset</button>
+      <button id="learnSolveBtn">Solve</button>
+      <button class="secondary" id="learnNewClearBtn">New/Clear</button>
+    </div>
+    <div class="messages">
+      <div class="status-line" id="learnStatusLine"></div>
     </div>
   </div>
 
@@ -968,7 +989,7 @@
         square you want as a starting clue and leave every other square blank (no
         need to type 0 anywhere). Every digit you type is checked against that
         cell's row, column, and 3x3 box &mdash; a digit that's already used
-        elsewhere in that row, column, or box is rejected with a beep. Once you've
+        elsewhere in that row, column, or box is rejected with a ding. Once you've
         typed at least 6 clues, a &ldquo;Start Solving&rdquo; button appears &mdash;
         click it to lock in whatever you typed as the puzzle's givens and move to
         the solving screen. Below 6 clues, the button simply isn't there yet;
@@ -1153,8 +1174,26 @@
     </div>
   </div>
 
+  <!-- ================= PRINT PUZZLE: OPTIONS POPUP ================= -->
+  <!-- Shown by printBtn's handler (see sudoku-ui.js); hidden in print by the
+       same body > *:not(#printArea) rule as every other overlay. -->
+  <div class="modal-overlay" id="printOptionsOverlay">
+    <div class="modal" role="dialog" aria-labelledby="printOptionsTitle">
+      <h2 id="printOptionsTitle">Print Options</h2>
+      <div class="modal-body">
+        <p>Include the help numbers (row, column and square candidates) on the printout?</p>
+      </div>
+      <div class="modal-footer">
+        <button id="printWithHelpBtn">Print with Help</button>
+        <button id="printWithoutHelpBtn">Print without Help</button>
+        <button class="secondary" id="printOptionsCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
 <script src="sudoku-logic.js"></script>
 <script src="sudoku-ui.js"></script>
+<script src="learn-mode-logic.js"></script>
+<script src="learn-mode-ui.js"></script>
 </body>
 </html>

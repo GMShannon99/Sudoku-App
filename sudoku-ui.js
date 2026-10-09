@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "4.0.8";
-const HELP_LAST_UPDATED = "September 7, 2026";
+const APP_VERSION = "5.0.1";
+const HELP_LAST_UPDATED = "October 8, 2026";
 
 const ENTRY_HINT_TEXT = "Type in Sudoku digits to create a Puzzle.";
 
@@ -97,24 +97,74 @@ let moveHistory = [];
 // would overwrite it with stale state.
 let redoStack = [];
 
-function beep() {
+// The one sound for every rejected entry: a short, soft bell "ding"
+// (two sine partials -- a fundamental plus an inharmonic overtone, the
+// classic small-bell recipe -- with an instant attack and a quick
+// exponential decay). Synthesized with the Web Audio API like
+// shatterSound() below, so no audio file is needed.
+//
+// One shared AudioContext is reused (browsers cap how many can exist, and
+// iOS/iPadOS Safari starts every context "suspended" until a user gesture
+// resumes it), unlocked by the first tap/click/keypress -- see
+// unlockAudio(). Rapid rejections are throttled so dings never stack into
+// a distorted buzz.
+const DING_MIN_GAP_SECONDS = 0.09;
+let audioCtx = null;
+let lastDingTime = -Infinity;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    audioCtx = new Ctor();
+  }
+  return audioCtx;
+}
+
+function unlockAudio() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 600;
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === "suspended") ctx.resume();
+  } catch (e) {
+  }
+}
+
+["pointerdown", "touchend", "mousedown", "keydown"].forEach((type) => {
+  document.addEventListener(type, unlockAudio, { capture: true, passive: true });
+});
+
+function ding() {
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const now = ctx.currentTime;
+    if (now - lastDingTime < DING_MIN_GAP_SECONDS) return;
+    lastDingTime = now;
+
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.14, now + 0.005);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+    master.connect(ctx.destination);
+
+    [[1318.5, 1], [3640, 0.25]].forEach(([freq, level]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = level;
+      osc.connect(gain).connect(master);
+      osc.start(now);
+      osc.stop(now + 0.65);
+    });
   } catch (e) {
   }
 }
 
 // Synthesized "glass breaking" crash, same no-dependencies/no-asset
-// approach as beep() above (Web Audio API only), just layering more than
+// approach as ding() above (Web Audio API only), just layering more than
 // one sound source so it reads as a crash rather than another single tone:
 // a short burst of filtered white noise for the low "crash," plus a
 // handful of brief, randomly pitched/timed high tones on top for the
@@ -291,12 +341,15 @@ function onEntryCellInput(row, col, input) {
 
   let v = input.value;
   if (v.length > 1) v = v[v.length - 1];
-  if (v && !/[1-9]/.test(v)) v = "";
+  if (v && !/[1-9]/.test(v)) {
+    ding();
+    v = "";
+  }
 
   if (v) {
     // Same row/column/box duplicate check the solving screen's
     // onSolvingCellInput uses -- a digit already used elsewhere among the
-    // OTHER clues typed so far is rejected with a beep, so a puzzle handed
+    // OTHER clues typed so far is rejected with a ding, so a puzzle handed
     // off to "Start Solving" can never start out broken.
     const digit = parseInt(v, 10);
     const grid = readGrid(entryCells);
@@ -309,7 +362,7 @@ function onEntryCellInput(row, col, input) {
     const boxOk = boxMissing[box].has(digit);
 
     if (!(rowOk && colOk && boxOk)) {
-      beep();
+      ding();
       v = "";
     }
   }
@@ -349,6 +402,11 @@ document.getElementById("createNewBtn").addEventListener("click", () => {
 });
 
 document.getElementById("generateBtn").addEventListener("click", async () => {
+  // LEARN MODE hook: the 4x4 Learn Mode puzzle replaces the normal flow.
+  if (window.LearnMode && LearnMode.isOn()) {
+    LearnMode.start();
+    return;
+  }
   // setEntryHint() below writes into #entryHint, which lives inside
   // #entryBoardFrame -- reveal it so "Generating puzzle..." is actually
   // visible even if this is clicked straight from the buttons-only home
@@ -835,7 +893,10 @@ document.addEventListener("mousedown", (event) => {
 function onSolvingCellInput(row, col, input) {
   let v = input.value;
   if (v.length > 1) v = v[v.length - 1];
-  if (v && !/[1-9]/.test(v)) v = "";
+  if (v && !/[1-9]/.test(v)) {
+    ding();
+    v = "";
+  }
 
   if (v) {
     const digit = parseInt(v, 10);
@@ -849,7 +910,7 @@ function onSolvingCellInput(row, col, input) {
     const boxOk = boxMissing[box].has(digit);
 
     if (!(rowOk && colOk && boxOk)) {
-      beep();
+      ding();
       v = "";
     }
   }
@@ -1107,7 +1168,7 @@ function getPrintableGridOrShowInvalid() {
 // on screen (see updateCandidateLabels()) in the same right/bottom
 // positions. Only ever called after the caller has confirmed grid has a
 // valid solution -- this function itself doesn't check.
-function renderPrintCanvas(grid) {
+function renderPrintCanvas(grid, withHelp = true) {
   const canvas = document.createElement("canvas");
   canvas.width = PRINT_CANVAS_WIDTH;
   canvas.height = PRINT_CANVAS_HEIGHT;
@@ -1202,7 +1263,7 @@ function renderPrintCanvas(grid) {
         ctx.fillStyle = PRINT_INK;
         ctx.font = `${isGiven ? "bold " : ""}44px monospace`;
         ctx.fillText(String(val), x + PRINT_CELL_SIZE / 2, y + PRINT_CELL_SIZE / 2);
-      } else {
+      } else if (withHelp) {
         const candidates = new Set(computeValidCandidates(r, c));
         const sub = PRINT_CELL_SIZE / 3;
         ctx.font = "18px monospace";
@@ -1220,6 +1281,10 @@ function renderPrintCanvas(grid) {
       }
     }
   }
+
+  // "Print without Help" stops here: no row labels, column labels, or
+  // candidate mini-grids -- only the header, grid, givens and entries.
+  if (!withHelp) return canvas.toDataURL("image/jpeg", PRINT_JPEG_QUALITY);
 
   // Row-missing labels, to the right of the grid -- same digits/format as
   // updateCandidateLabels() (space-joined, checkmark once complete).
@@ -1272,11 +1337,11 @@ function renderPrintCanvas(grid) {
 // entirely, which is why it's the more cross-browser-reliable technique --
 // iOS Safari's Share Sheet "Print" (AirPrint) is then just its ordinary
 // handling of a print-triggered document, no special-casing needed.
-document.getElementById("printBtn").addEventListener("click", () => {
+function printPuzzle(withHelp) {
   const grid = getPrintableGridOrShowInvalid();
   if (!grid) return;
 
-  const dataUrl = renderPrintCanvas(grid);
+  const dataUrl = renderPrintCanvas(grid, withHelp);
 
   // Setting .src to a value that's already loaded doesn't reliably re-fire
   // "load" in every browser (e.g. printing the same puzzle twice in a row
@@ -1292,6 +1357,44 @@ document.getElementById("printBtn").addEventListener("click", () => {
     window.print();
   };
   printImageEl.src = dataUrl;
+}
+
+// The Print button first asks whether to include the help numbers. The
+// print is a canvas image (not the live DOM), so "without help" simply
+// renders that image without the help numbers -- nothing on screen or in
+// the puzzle data is ever touched, so there is nothing to restore afterward.
+const printOptionsOverlayEl = document.getElementById("printOptionsOverlay");
+
+function showPrintOptionsPopup() {
+  printOptionsOverlayEl.classList.add("active");
+}
+
+function hidePrintOptionsPopup() {
+  printOptionsOverlayEl.classList.remove("active");
+}
+
+document.getElementById("printBtn").addEventListener("click", () => {
+  clearIterationCount();
+  const check = readGrid(solvingCells).map((row) => row.slice());
+  const { solved } = SudokuLogic.solve(check);
+  if (!(solved && isGridFullyValid(check))) {
+    showPrintInvalidPopup();
+    return;
+  }
+  showPrintOptionsPopup();
+});
+
+document.getElementById("printWithHelpBtn").addEventListener("click", () => {
+  hidePrintOptionsPopup();
+  printPuzzle(true);
+});
+document.getElementById("printWithoutHelpBtn").addEventListener("click", () => {
+  hidePrintOptionsPopup();
+  printPuzzle(false);
+});
+document.getElementById("printOptionsCancelBtn").addEventListener("click", hidePrintOptionsPopup);
+printOptionsOverlayEl.addEventListener("click", (event) => {
+  if (event.target === printOptionsOverlayEl) hidePrintOptionsPopup();
 });
 
 document.getElementById("printInvalidCloseBtn").addEventListener("click", hidePrintInvalidPopup);
@@ -1582,6 +1685,16 @@ function goToSpecialScreen() {
   specialBoxIndex = 0;
   specialPriorHidden = null;
   specialNextHidden = null;
+  // A prior visit may have left Prior/Next mid-shatter or shattered away
+  // (e.g. Return was clicked while sitting on box 9, so Next never
+  // reassembled) -- updateSpecialNavButtons()'s own "not yet set up" branch
+  // below only forces a button hidden when it should be, never un-hides one
+  // that's stale from last time, so guarantee both start every visit intact
+  // and visible (same guarantee resetButtonShatter() gives solveBtnEl/
+  // statsBtnEl elsewhere) before recomputing which one (if any) box 1 of 9
+  // actually needs hidden.
+  resetButtonShatter(specialPriorBtnEl);
+  resetButtonShatter(specialNextBtnEl);
   // Builds the magnified box's DOM now, while specialScreen is still
   // display:none -- it's fully ready before the spiral-blur transition even
   // starts, let alone by the time it finishes (see spiralBlurTransition()).
@@ -1802,8 +1915,8 @@ const statsBtnEl = document.getElementById("statsBtn");
 
 // The dashboard behind this is public (a Umami "share" link, not the
 // authenticated stats API) -- exactly so nothing secret ever has to ship
-// to the browser to show it, unlike an API-key-based fetch would. Just a
-// link out; no request of our own to succeed or fail.
+// to the browser to show it, unlike the API-key-based fetch this used to
+// do. Just a link out; no request of our own to succeed or fail.
 const UMAMI_SHARE_URL = "https://cloud.umami.is/share/7Ent2VwDGvCfoq6r";
 
 // Hides and clears any previously shown message. Called every time the
@@ -1813,9 +1926,10 @@ function resetStatsResult() {
   statsResultEl.textContent = "";
 }
 
-// Brief confirmation shown in the same spot an inline count used to live,
-// for the instant before the new tab takes focus -- there's nothing to
-// load or fail here, so this never changes again after being set.
+// Brief confirmation shown in the same spot the old inline count used to
+// live, for the instant before the new tab takes focus -- there's nothing
+// left to load or fail here, so unlike the old version this never changes
+// again after being set.
 function showPuzzleStats() {
   statsResultEl.hidden = false;
   statsResultEl.textContent = "Opening live stats…";
@@ -1890,6 +2004,7 @@ document.addEventListener("keydown", (event) => {
     hideHelp();
     hideSpecialHelp();
     hidePrintInvalidPopup();
+    hidePrintOptionsPopup();
   }
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
