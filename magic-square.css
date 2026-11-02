@@ -1,0 +1,80 @@
+/* MAGIC SQUARES styles -- see magic-square-logic.js for how to remove the feature. */
+
+.ms-rules {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 0 14px;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: left;
+}
+.ms-rules p { margin: 0 0 10px; }
+.ms-rules ul { margin: 0; padding-left: 22px; }
+
+/* 3x3 grids. Cell size steps down in the same tiers (520/500/400px) the
+   Sudoku grid uses, so the board plus the frame padding stays inside a
+   320px viewport. */
+.ms-board-frame {
+  --ms-cell: 96px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  background: var(--board-edge);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+}
+.ms-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--ms-cell));
+  grid-template-rows: repeat(3, var(--ms-cell));
+  gap: 4px;
+  background: var(--board-bg);
+  padding: 4px;
+  border-radius: 4px;
+}
+.ms-grid input.cell {
+  width: var(--ms-cell);
+  height: var(--ms-cell);
+  min-width: 0;
+  padding: 0;
+  border-radius: 4px;
+  /* >= 16px always, so iPhone Safari never zooms in on focus. */
+  font-size: max(16px, calc(var(--ms-cell) / 2));
+  /* iOS dims disabled inputs' text; keep givens/solved digits crisp. */
+  opacity: 1;
+  -webkit-text-fill-color: currentColor;
+}
+
+@media (max-width: 520px) { .ms-board-frame { --ms-cell: 84px; } }
+@media (max-width: 500px) { .ms-board-frame { --ms-cell: 76px; } }
+@media (max-width: 400px) { .ms-board-frame { --ms-cell: 68px; } }
+
+.ms-screen .controls button {
+  min-width: 96px;
+  padding: 12px 22px;
+  font-size: 1rem;
+}
+@media (max-width: 400px) {
+  .ms-screen .controls button { min-width: 0; padding: 12px 16px; }
+}
+
+.ms-screen .messages { text-align: center; min-height: 1.5em; }
+
+.ms-rules-heading {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  margin: 14px 0 6px;
+}
+.ms-rules-heading:first-child { margin-top: 0; }
+.ms-rules ul + .ms-rules-heading { margin-top: 18px; }
+
+.ms-level-picker {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 18px;
+  font-size: 0.9rem;
+}
+.ms-level-picker label { cursor: pointer; }
+.ms-level-picker + .ms-level-picker { margin-top: 10px; }

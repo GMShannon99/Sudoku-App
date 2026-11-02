@@ -1,6 +1,6 @@
 {
   "name": "sudoku-app",
-  "version": "5.0.1",
+  "version": "5.1.2",
   "description": "A browser-based Sudoku puzzle entry and solving tool.",
   "private": true,
   "scripts": {

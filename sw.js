@@ -7,7 +7,7 @@
  * forever.
  */
 
-const CACHE_VERSION = "v10";
+const CACHE_VERSION = "v11";
 const CACHE_NAME = `sudoku-static-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -18,6 +18,9 @@ const PRECACHE_URLS = [
   "learn-mode-logic.js",
   "learn-mode-ui.js",
   "learn-mode.css",
+  "magic-square-logic.js",
+  "magic-square-ui.js",
+  "magic-square.css",
   "icons/icon-144.png",
   "icons/icon-192.png",
   "icons/icon-512.png",

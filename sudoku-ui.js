@@ -23,8 +23,8 @@ const samplePuzzle = [
   [0,9,0,0,0,0,4,0,0],
 ];
 
-const APP_VERSION = "5.0.1";
-const HELP_LAST_UPDATED = "October 8, 2026";
+const APP_VERSION = "5.1.2";
+const HELP_LAST_UPDATED = "November 1, 2026";
 
 const ENTRY_HINT_TEXT = "Type in Sudoku digits to create a Puzzle.";
 
