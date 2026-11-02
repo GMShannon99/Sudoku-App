@@ -67,6 +67,7 @@
   margin: 14px 0 6px;
 }
 .ms-rules-heading:first-child { margin-top: 0; }
+.ms-rules p + .ms-rules-heading { margin-top: 10px; }
 .ms-rules ul + .ms-rules-heading { margin-top: 18px; }
 
 .ms-level-picker {

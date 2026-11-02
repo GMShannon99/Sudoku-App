@@ -86,7 +86,7 @@ Switching into the Special view (via **Special**) or back out of it (via **Retur
 
 ### Version display
 
-The current version number is shown right in the entry screen's page title (e.g. "Enter Your Sudoku Puzzle v5.1.2").
+The current version number is shown right in the entry screen's page title (e.g. "Enter Your Sudoku Puzzle v5.1.3").
 
 ## How to run it
 
@@ -113,6 +113,7 @@ npm test
 
 ## Version history
 
+- **v5.1.3** — Small layout change on the Magic Square Rules screen: the line "Fill the 3×3 grid so that:" now sits above the "Level 1" heading instead of below it. The rule bullets and everything else on the screen stay where they were.
 - **v5.1.2** — Reworked the Magic Squares levels into two independent choices on the Rules screen. **Level 1** (digits 1–9, total 15, the 8 valid squares) and **Level 2** (whole numbers 1–20, each used once, every row/column/diagonal sharing the same total) pick the number range and rules; the old "Easy Level"/"Hard Level" headings are now "Level 1"/"Level 2". A separate **Easy Level**/**Hard Level** radio group now only controls Generate Puzzle: Easy gives at least 3 squares (more only if needed for a single answer), Hard gives exactly 2 (a single answer at Level 1; at Level 2 there are usually several valid completions and any of them counts as solved). Screens after Rules show "Level 1"/"Level 2" (plus the difficulty for generated puzzles) under the title. Manual Entry ignores the difficulty.
 - **v5.1.1** — Added a Hard Level to Magic Squares. The Rules screen now describes both levels and has "Easy Level"/"Hard Level" radio buttons (Easy by default); the choice shows as a sub-heading on the input, puzzle and solution screens. Hard Level uses whole numbers 1–20 (each used once) in which every row, column and both diagonals share the same total, which the player works out rather than being fixed. Generated hard puzzles show 2–3 givens and are verified to have exactly one solution; hand-entered numbers are checked to be completable. Easy Level is unchanged.
 - **v5.1.0** — Added Magic Squares (3×3): a new "Magic Squares" button at the bottom of the home screen opens a short Rules screen with **Manual Entry**, **Generate Puzzle** and **Exit**. Manual Entry lets you type starting numbers (digits 1–9 only, no repeats anywhere in the grid, each rejected with a popup) and checks they can still be completed into one of the 8 valid magic squares; Generate Puzzle picks a random valid square and shows 3–4 givens with exactly one solution. On the puzzle screen you fill in the rest, see "Solved!" when it is right, or use **Show Solution** (and **Return** to your entries). The code lives in new files (`magic-square-logic.js`, `magic-square-ui.js`, `magic-square.css`); no existing Sudoku behavior changed.

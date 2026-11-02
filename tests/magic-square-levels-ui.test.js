@@ -149,7 +149,7 @@ for (const level of [1, 2]) {
         window.__result = JSON.stringify(out);
       `);
       const defaults = { level1: true, level2: false, easy: true, hard: false };
-      assert.deepEqual(r.home, ["Enter Your Sudoku Puzzle v5.1.2", "", defaults]);
+      assert.deepEqual(r.home, ["Enter Your Sudoku Puzzle v5.1.3", "", defaults]);
       assert.deepEqual(r.again, ["", defaults]);
       assert.equal(r.manual, "Level 1");
     });
@@ -231,4 +231,19 @@ test("Level 1 + Hard Level: the 2-given puzzle is solved only by its single answ
     window.__result = JSON.stringify({ count: all.length, givens: givenCount(P), solved: $("msStatusLine").textContent });
   `);
   assert.deepEqual(r, { count: 1, givens: 2, solved: "Solved!" });
+});
+
+test("Rules screen order: intro line, then the Level 1 heading, then its bullets, then Level 2", () => {
+  const r = run(`
+    click("magicSquaresBtn");
+    const kids = Array.from(document.querySelector("#msRulesScreen .ms-rules").children);
+    window.__result = JSON.stringify(kids.map((e) => e.tagName + ":" + e.textContent.trim().slice(0, 20)));
+  `);
+  assert.deepEqual(r, [
+    "P:Fill the 3\u00d73 grid so",
+    "H3:Level 1",
+    "UL:Each number from 1 t",
+    "H3:Level 2",
+    "UL:Each square holds on",
+  ]);
 });
